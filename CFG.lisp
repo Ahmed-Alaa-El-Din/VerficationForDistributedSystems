@@ -1,3 +1,7 @@
+(defparameter *basic-blocks* (make-array 1 :fill-pointer 0 :adjustable t))
+(defparameter statements   (make-array 1 :fill-pointer 0 :adjustable t))
+
+
 (defclass statement-block ()
 	((statement								:accessor statement								:initarg :statement )
 	 (gen											:accessor gen)
@@ -11,9 +15,6 @@
 	 (last-stmt						:accessor last-stmt						:initarg :last-stmt)
 	 (next-block					:accessor next-block)
 	 (predecessor-blocks	:accessor predecessor-blocks	:initarg :predecessor-blocks)))
-
-(defparameter basic-blocks (make-array 1 :fill-pointer 0 :adjustable t))
-(defparameter statements   (make-array 1 :fill-pointer 0 :adjustable t))
 
 (defun return-condition (condition-statement) ;;like (if (= y 12))
 	;;(when (eq (car condition-statement) 'if)
@@ -46,17 +47,17 @@
 	program-code)
 
 
-(defun leader-predecessors (basic-blocks)
+(defun leader-predecessors ()
 	"loop through basic blocks w a5ali l predecessors bto3 l leader bta3 l block yeb2o vector of last-stmt-indexes of predecessors"
-	(loop :for basic-block :being :the :element :of basic-blocks
+	(loop :for basic-block :being :the :element :of *basic-blocks*
 		 :do (let ((pre (make-array 1
 															 :fill-pointer 0
 															 :adjustable t)))
 					(loop :for predecessor :being :the :element :of (predecessor-blocks basic-block)
-						 :do (vector-push-extend (last-stmt (elt basic-blocks predecessor)) pre))
+						 :do (vector-push-extend (last-stmt (elt *basic-blocks* predecessor)) pre))
 					(setf (predecessor-statements (elt statements (leader basic-block))) pre))))
 
-(defun predecessors (number v) ;;v : statemenets or basic-blocks
+(defun predecessors (number v) ;;v : statemenets or *basic-blocks*
 	(if (zerop (length v))
 			(vector (- (length v) number))
 			(vector))
@@ -72,35 +73,35 @@
 																		 :predecessor-statements predecessors)
 											statements))
 
-(defun push-basic-block (ldr lastt predecessors)
+(defun push-basic-block (predecessors)
 	(vector-push-extend (make-instance 'basic-block
-																		 :leader ldr
-																		 :last-stmt lastt
+																		 :leader *leader*
+																		 :last-stmt *last-stmt*
 																		 :predecessor-blocks predecessors)
-											basic-blocks)
-	(setf leader (incf last-stmt)))
+											*basic-blocks*)
+	(setf *leader* (incf *last-stmt*)))
 
 (defun construct-basic-blocks ()
-	(let ((leader 0)
-				(last-stmt 0))
-		(declare (special leader last-stmt))
+	(let ((*leader* 0)
+				(*last-stmt* 0))
+		(declare (special *leader* *last-stmt*))
 		(loop
 			 :for stmt :in statements
 			 :for x :from 0
 			 do (cond ((eq (car stmt) 'if)
-								 (push-basic-block leader last-stmt (vector-union (predecessors 1 basic-blocks)
-																																	(predecessors 2 basic-blocks)));;maybe wrong
-								 (push-basic-block leader last-stmt (predecessors 1 basic-blocks))
-								 (push-basic-block leader last-stmt (predecessors 2 basic-blocks))
+								 (push-basic-block (vector-union (predecessors 1 *basic-blocks*)
+																																	(predecessors 2 *basic-blocks*)));;maybe wrong
+								 (push-basic-block (predecessors 1 *basic-blocks*))
+								 (push-basic-block (predecessors 2 *basic-blocks*))
 								 (incf x 2))
 								((or (eq (car stmt) 'unless) (eq (car stmt) 'when))
-								 (push-basic-block leader last-stmt (vector-union (predecessors 1 basic-blocks)
-																																	(predecessors 2 basic-blocks)))
-								 (push-basic-block leader last-stmt (predecessors 1 basic-blocks))
+								 (push-basic-block (vector-union (predecessors 1 *basic-blocks*)
+																																	(predecessors 2 *basic-blocks*)))
+								 (push-basic-block (predecessors 1 *basic-blocks*))
 								 (incf x))
-								(t (incf last-stmt))))
-		(push-basic-block leader (decf last-stmt) (vector-union (predecessors 1 basic-blocks)
-																														(predecessors 2 basic-blocks)))))
+								(t (incf *last-stmt*))))
+		(push-basic-block (progn (decf *last-stmt*) (vector-union (predecessors 1 *basic-blocks*)
+																															(predecessors 2 *basic-blocks*))))))
 
 ;;(defun next-block (statement) ;;statement block le7ad delwa2ti
 	;;(if (return-condition statement) ;;if condition is true

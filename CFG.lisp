@@ -15,12 +15,6 @@
 	 (next-block					:accessor next-block)
 	 (predecessor-blocks	:accessor predecessor-blocks	:initarg :predecessor-blocks)))
 
-(defun return-condition (condition-statement) ;;like (if (= y 12))
-	;;(when (eq (car condition-statement) 'if)
-	(cadr condition-statement))
-
-
-
 (defun construct-statement-vector (program-code)
 	(mapcar (lambda (stmt)
 						(cond ((eq (car stmt)
@@ -106,12 +100,6 @@
 								 (t (incf *last-stmt*))))
 		(push-basic-block (progn (decf *last-stmt*) (vector-union (predecessors 1 *basic-blocks*)
 																															(predecessors 2 *basic-blocks*))))))
-
-;;(defun next-block (statement) ;;statement block le7ad delwa2ti
-	;;(if (return-condition statement) ;;if condition is true
-		;;  (progn
-
-
 
 ;;;;; DFG ;;;;;
 

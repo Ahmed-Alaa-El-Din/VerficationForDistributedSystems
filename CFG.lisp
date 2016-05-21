@@ -1,7 +1,7 @@
 (defparameter *basic-blocks* (make-array 1 :fill-pointer 0 :adjustable t))
 (defparameter *statements*     (make-array 1 :fill-pointer 0 :adjustable t))
 
-(defclass statement-block ()
+(defclass stmt-block ()
 	((statement								:accessor statement								:initarg :statement )
 	 (gen											:accessor gen)
 	 (kill										:accessor kill	:initform (make-array 1 :fill-pointer 0 :adjustable t))
@@ -9,41 +9,42 @@
 	 (out											:accessor out		:initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (predecessor-statements	:accessor predecessor-statements	:initarg :predecessor-statements)))
 
-(defmethod print-object ((this statement-block) out)
+(defmethod print-object ((this stmt-block) out)
 	(print-unreadable-object (this out :type t)
-		(format out ":statement \"~a\" :predecessor-statements \"~a\""
+		(format out ":stmt ~a :pred ~a"
 						(statement this) (predecessor-statements this))))
 
 ;; (defun push-statement (stmt predecessors)
-;;	(vector-push-extend (make-instance 'statement-block
+;;	(vector-push-extend (make-instance 'stmt-block
 ;;																		 :statement stmt
 ;;																		 :predecessor-statements predecessors)
 ;;											*statements*))
-(defun make-statement-block (stmt predecessors)
-	(make-instance 'statement-block :statement stmt :predecessor-statements predecessors))
+(defun make-stmt-block (stmt predecessors)
+	(make-instance 'stmt-block :statement stmt :predecessor-statements predecessors))
 
-;; these convert a stmt to several statement-blocks
+;; these convert a stmt to several stmt-blocks
 (defun convert-if2 (stmt)
 	(destructuring-bind (if cond yes no) stmt
-		`(,(make-statement-block `(,if ,cond)	'(-1))
-			 ,(make-statement-block yes					'(-1))
-			 ,(make-statement-block no					'(-2)))))
+		`(,(make-stmt-block `(,if ,cond)	'(-1))
+			 ,(make-stmt-block yes					'(-1))
+			 ,(make-stmt-block no					'(-2)))))
 
 (defun convert-if1 (stmt)
 	(destructuring-bind (if cond yes) stmt
-			`(,(make-statement-block `(,if ,cond) '(-1))
-				,(make-statement-block yes '(-1)))))
+		`(,(make-stmt-block `(,if ,cond) '(-1))
+			 ,(make-stmt-block yes '(-1)))))
 
 (defun convert-stmt (stmt)
 	(destructuring-bind (head . rest) stmt
-			(case head
-				(if (convert-if2 stmt))
-				((when unless) (convert-if1 stmt))
-				(otherwise `(,(make-statement-block stmt '(-1)))))))
+		(case head
+			(if (convert-if2 stmt))
+			((when unless) (convert-if1 stmt))
+			(otherwise `(,(make-stmt-block stmt '(-1)))))))
 
 (defun construct-statement-vector (program-code)
-	(mapcar #'convert-stmt
-					program-code))
+	(apply #'append
+				 (mapcar #'convert-stmt
+								 program-code)))
 
 (defclass basic-block ()
 	((frst-stmt						:accessor frst-stmt						:initarg :frst-stmt)

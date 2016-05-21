@@ -9,35 +9,48 @@
 	 (out											:accessor out		:initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (predecessor-statements	:accessor predecessor-statements	:initarg :predecessor-statements)))
 
+(defmethod print-object ((this statement-block) out)
+	(print-unreadable-object (this out :type t)
+		(format out ":statement \"~a\" :predecessor-statements \"~a\""
+						(statement this) (predecessor-statements this))))
+
+;; (defun push-statement (stmt predecessors)
+;;	(vector-push-extend (make-instance 'statement-block
+;;																		 :statement stmt
+;;																		 :predecessor-statements predecessors)
+;;											*statements*))
+(defun make-statement-block (stmt predecessors)
+	(make-instance 'statement-block :statement stmt :predecessor-statements predecessors))
+
+;; these convert a stmt to several statement-blocks
+(defun convert-if2 (stmt)
+	(destructuring-bind (if cond yes no) stmt
+		`(,(make-statement-block `(,if ,cond)	'(-1))
+			 ,(make-statement-block yes					'(-1))
+			 ,(make-statement-block no					'(-2)))))
+
+(defun convert-if1 (stmt)
+	(destructuring-bind (if cond yes) stmt
+			`(,(make-statement-block `(,if ,cond) '(-1))
+				,(make-statement-block yes '(-1)))))
+
+(defun convert-stmt (stmt)
+	(destructuring-bind (head . rest) stmt
+			(case head
+				(if (convert-if2 stmt))
+				((when unless) (convert-if1 stmt))
+				(otherwise `(,(make-statement-block stmt '(-1)))))))
+
+(defun construct-statement-vector (program-code)
+	(mapcar #'convert-stmt
+					program-code))
+
 (defclass basic-block ()
 	((frst-stmt						:accessor frst-stmt						:initarg :frst-stmt)
 	 (last-stmt						:accessor last-stmt						:initarg :last-stmt)
 	 (next-block					:accessor next-block)
 	 (predecessor-blocks	:accessor predecessor-blocks	:initarg :predecessor-blocks)))
 
-(defun construct-statement-vector (program-code)
-	(mapcar (lambda (stmt)
-						(cond ((eq (car stmt)
-											 'if)
-									 (push-statement (list (nth 0 stmt)
-																				 (nth 1 stmt))
-																	 (predecessors 1 *statements*))
-									 (push-statement (nth 2 stmt)
-																	 (predecessors 1 *statements*))
-									 (push-statement (nth 3 stmt)
-																	 (predecessors 2 *statements*)))
-									((or (eq (car stmt)
-													 'when)
-											 (eq (car stmt)
-													 'unless))
-									 (push-statement (list (nth 0 stmt)
-																				 (nth 1 stmt))
-																	 (predecessors 1 *statements*))
-									 (push-statement (nth 2 stmt)
-																	 (predecessors 1 *statements*)))
-									(t (push-statement stmt
-																		 (predecessors 1 *statements*))))))
-	program-code)
 
 (defun frst-stmt-predecessors ()
 	"loop through basic blocks w a5ali l predecessors bto3 l frst-stmt bta3 l block yeb2o vector of last-stmt-indexes of predecessors"
@@ -54,21 +67,6 @@
 					 (setf (predecessor-statements
 									(elt *statements* (frst-stmt basic-block))) pre))))
 
-(defun predecessors (number v) ;;v : statemenets or *basic-blocks*
-	(if (zerop (length v))
-			(vector (- (length v) number))
-			(vector))
-	;; (let ((predecessor-vector (make-array 1 :fill-pointer 0 :adjustable t)))
-	;;	(unless (eq (length v) 0)
-	;;		(vector-push-extend (- (length v) number) predecessor-vector))
-	;;	predecessor-vector)
-	)
-
-(defun push-statement (stmt predecessors)
-	(vector-push-extend (make-instance 'statement-block
-																		 :statement stmt
-																		 :predecessor-statements predecessors)
-											*statements*))
 
 (defun push-basic-block (predecessors)
 	(vector-push-extend (make-instance 'basic-block

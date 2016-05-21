@@ -1,5 +1,5 @@
-(defparameter *basic-blocks* (make-array 1 :fill-pointer 0 :adjustable t))
-(defparameter *statements*   (make-array 1 :fill-pointer 0 :adjustable t))
+;; (defparameter *basic-blocks* (make-array 1 :fill-pointer 0 :adjustable t))
+;; (defparameter *statements*   (make-array 1 :fill-pointer 0 :adjustable t))
 (defparameter *kill-hash-table* (make-hash-table))
 
 (defclass stmt-block ()
@@ -26,11 +26,10 @@
 		`(,(make-stmt-block `(,if ,cond) '(-1))
 			 ,(make-stmt-block yes         '(-1)))))
 (defun convert-stmt (stmt)
-	(destructuring-bind (head . rest) stmt
-		(case head
-			(if            (convert-if2 stmt))
-			((when unless) (convert-if1 stmt))
-			(otherwise `(,(make-stmt-block stmt '(-1)))))))
+	(case (car stmt)
+		(if            (convert-if2 stmt))
+		((when unless) (convert-if1 stmt))
+		(otherwise `(,(make-stmt-block stmt '(-1))))))
 (defun construct-statement-vector (program-code)
 	(apply #'append
 				 (mapcar #'convert-stmt
@@ -51,6 +50,11 @@
 	(print-unreadable-object (this out :type t)
 		(format out ":range ~3a ~3a :pred ~8a"
 						(frst-stmt this) (last-stmt this) (predecessor-blocks this))))
+
+(defvar *frst-stmt*)
+(defvar *last-stmt*)
+(defvar *index*)
+(defvar *length*)
 (defun make-basic-block (predecessors)
 	(prog1
 			(make-instance 'basic-block
@@ -149,7 +153,6 @@
 			 do (setf in (vector-union in (out (elt *statements* predecessor-index)))))
 		in))
 
-
 (defun construct-kill-hashtable () ;;loop through each statement in statements if size of gen
 	;;shoof (car gen) mawgod fel hashtable ? push-back fel associated vector (cdr gen) ;; : e3mel key fel hashtable bel car w e3mel array feeha cdr"
 	(loop :for stmt :accross statements :do
@@ -172,7 +175,6 @@
 				 (setf (kill stmt) kill-vector)))))
 
 (defun value-circle (statement-index)
-	;;(let ((gen-cons (gen (elt statements statement-index))))
 	(let ((inputs (cdr (nth 2 (statement (elt statements statement-index)))))
 				(value-hash-table (make-hash-table))
 				(in-in-set? nil))
@@ -185,14 +187,10 @@
 				 (setf (gethash (cons input statement-index)value-hash-table)nil)))
 		value-hash-table))
 
-
 (defun traverse-hash-table (ht)
 	(if ht
 			(maphash #'(lambda (key associated-value)
 									 (format t "~a: ~%" key)
-									 ;;(unless associated-value
-									 ;;(traverse-hash-table associated-value)))ht))
-									 ;;(if ht (print(hash-table-count associated-value)) (print 0)))ht))
 									 (if ht (traverse-hash-table associated-value) (print "nil")))ht)
 			(print "nil")))
 
@@ -205,7 +203,7 @@
 		(setq decision (min input received))
 		(return decision)))
 
-(construct-statement-vector parsed-code)
+(construct-statement-vector aggan-parsed-code)
 (construct-basic-blocks)
 (leader-predecessors basic-blocks)
 (gen-and-initial-out )
@@ -213,19 +211,15 @@
 (kill-set)
 (reaching-definitions statements)
 
-(loop :for x :from 0 :to (1- (length statements))
-	 :do	 (format t "statement ~a: ~%gen: " x)
-	 (loop :for g :accross (gen (elt statements x))
-			:do				(format t "~a " g))
-	 (format t "~%kill: ")
-	 (loop :for k :accross (kill (elt statements x))
-			:do				(format t "~a " k))
-	 (format t "~%in: ")
-	 (loop :for i :accross (in (elt statements x))
-			:do				(format t "~a " i))
-	 (format t "~%out: ")
-	 (loop :for o :accross (out (elt statements x))
-			:do				(format t "~a " o))
+(loop
+	 :for stmt :across statements
+	 :for x :from 0
+	 :do
+	 (format t "statement ~a: " x)
+	 (format t "~%gen: ") (map nil (lambda (x) (format "~a " x)) (gen stmt))
+	 (format t "~%kill: ")(map nil (lambda (x) (format "~a " x)) (kill stmt))
+	 (format t "~%in: ")  (map nil (lambda (x) (format "~a " x)) (in stmt))
+	 (format t "~%out: ") (map nil (lambda (x) (format "~a " x)) (out stmt))
 	 (format t"~%"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -249,8 +243,9 @@
 														;;	(print "y = 21"))
 														))
 
-(construct-statement-vector parsed-code)
-(construct-basic-blocks)
+(let* ((statements (construct-statement-vector parsed-code))
+			 (bblocks (construct-basic-blocks statements)))
+	(format t "~a~%~a~%" statements bblocks))
 (frst-stmt-predecessors basic-blocks)
 (gen-and-initial-out )
 ;;(reaching-definitions *statements*)

@@ -210,67 +210,67 @@
 																	(send-to-other-process input)
 																	(setq received (recv-from other-process))
 																	(setq decision (min input received))
-																	(return decision))
+																	(return decision)))
 
 
-	(construct-statement-vector parsed-code)
-	(construct-basic-blocks)
-	(leader-predecessors basic-blocks)
-	(gen-and-initial-out )
-	(construct-kill-hashtable)
-	(kill-set)
-	(reaching-definitions statements)
+(construct-statement-vector parsed-code)
+(construct-basic-blocks)
+(leader-predecessors basic-blocks)
+(gen-and-initial-out )
+(construct-kill-hashtable)
+(kill-set)
+(reaching-definitions statements)
 
 
 
 
-	(loop :for x :from 0 :to (1- (length statements)) :do
-		 (format t "statement ~a: ~%gen: " x)
-		 (loop :for g :accross (gen (elt statements
+(loop :for x :from 0 :to (1- (length statements)) :do
+	 (format t "statement ~a: ~%gen: " x)
+	 (loop :for g :accross (gen (elt statements
 
-																										 x)) :do
-				(format t "~a " g))
-		 (format t "~%kill: ")
-		 (loop :for k :accross (kill (elt statements
+																	 x)) :do
+			(format t "~a " g))
+	 (format t "~%kill: ")
+	 (loop :for k :accross (kill (elt statements
 
-																											x)) :do
-				(format t "~a " k))
-		 (format t "~%in: ")
-		 (loop :for i :accross (in (elt statements
+																		x)) :do
+			(format t "~a " k))
+	 (format t "~%in: ")
+	 (loop :for i :accross (in (elt statements
 
-																										x)) :do
-				(format t "~a " i))
-		 (format t "~%out: ")
-		 (loop :for o :accross (out (elt statements
+																	x)) :do
+			(format t "~a " i))
+	 (format t "~%out: ")
+	 (loop :for o :accross (out (elt statements
 
-																										 x)) :do
-				(format t "~a " o))
-		 (format t"~%"))
+																	 x)) :do
+			(format t "~a " o))
+	 (format t"~%"))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	(defparameter parsed-code '((setq x 12)
-															(setq y 21)
-															(if (= y 12)
-																	(setq y (* y 2))
-																	(setq x 42))
-															(setq w 12)
-															(+ 2 3)
-															(setf z 22)
-															(when (> x 20)
-																(setq x (+ x 1)))
-															(setq zz 18)
-															(* 3 w)
-															(unless (> y 30)
-																(print "y = 21"))
-															(square y)
-															(* x 2)
-															;; (unless (> y 30)
-															;;	(print "y = 21"))
-															))
+(defparameter parsed-code '((setq x 12)
+														(setq y 21)
+														(if (= y 12)
+																(setq y (* y 2))
+																(setq x 42))
+														(setq w 12)
+														(+ 2 3)
+														(setf z 22)
+														(when (> x 20)
+															(setq x (+ x 1)))
+														(setq zz 18)
+														(* 3 w)
+														(unless (> y 30)
+															(print "y = 21"))
+														(square y)
+														(* x 2)
+														;; (unless (> y 30)
+														;;	(print "y = 21"))
+														))
 
-	(construct-statement-vector parsed-code)
-	(construct-basic-blocks)
-	(frst-stmt-predecessors basic-blocks)
-	(gen-and-initial-out )
-	;;(reaching-definitions *statements*)
+(construct-statement-vector parsed-code)
+(construct-basic-blocks)
+(frst-stmt-predecessors basic-blocks)
+(gen-and-initial-out )
+;;(reaching-definitions *statements*)

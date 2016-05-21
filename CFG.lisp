@@ -1,7 +1,3 @@
-;; (defparameter *basic-blocks* (make-array 1 :fill-pointer 0 :adjustable t))
-;; (defparameter *statements*   (make-array 1 :fill-pointer 0 :adjustable t))
-(defparameter *kill-hash-table* (make-hash-table))
-
 (defclass stmt-block ()
 	((id                      :accessor id                      :initarg :id)
 	 (statement								:accessor statement								:initarg :statement)
@@ -16,23 +12,33 @@
 		(format out ":id ~3a :stmt ~20a :pred ~a"
 						(id this) (statement this) (predecessor-statements this))))
 
-(defparameter *id*)
+(defparameter *id* 0)
+(defparameter *next-pred* nil)
+(defun make-stmt-block (stmt &key (predecessors *next-pred*))
+	(prog1 (make-instance 'stmt-block
+												:id (1- (incf *id*))
+												:statement stmt
+												:predecessor-statements predecessors)
+		(setf *next-pred* (list (1- *id*)))))
 
-(defun make-stmt-block (stmt &key (predecessors  (1- *id*)))
-	(make-instance 'stmt-block :id (1- (incf *id*)) :statement stmt :predecessor-statements predecessors))
 ;; these convert a stmt to several stmt-blocks
-
 (defun convert-if2  (stmt)
 	(destructuring-bind (if cond yes no) stmt
 		(let* ((condition (make-stmt-block (list if cond)))
-					 (yes-branch (make-stmt-block yes))
-					 (no-branch (make-stmt-block no :predecessors (id condition))))
-			(list condition yes-branch no-branch))))
+					 (yes-branch (make-stmt-block yes :predecessors (list (id condition))))
+					 (no-branch (make-stmt-block no :predecessors (list (id condition)))))
+			(setf *next-pred* (list (id yes-branch) (id no-branch)))
+			(list condition
+						yes-branch
+						no-branch))))
 
 (defun convert-if1  (stmt)
 	(destructuring-bind (if cond yes) stmt
-		`(,(make-stmt-block `(,if ,cond) )
-			 ,(make-stmt-block yes         ))))
+		(let* ((condition (make-stmt-block (list if cond)))
+					 (yes-branch (make-stmt-block yes :predecessors (list (id condition)))))
+			(setf *next-pred* (list (id condition) (id yes-branch)))
+			(list condition
+						yes-branch))))
 
 (defun convert-stmt (stmt)
 	(case (car stmt)
@@ -41,7 +47,8 @@
 		(otherwise `(,(make-stmt-block stmt )))))
 
 (defun construct-statement-vector (program-code)
-	(let ((*id* 0))
+	(let ((*id* 0)
+				(*next-pred* (list -1)))
 		;;(declare (special *id*))
 		(apply #'append
 					 (mapcar #'convert-stmt
@@ -195,6 +202,8 @@
 		(loop for predecessor-index being the element of (predecessor-statements statement)
 			 do (setf in (vector-union in (out (elt *statements* predecessor-index)))))
 		in))
+
+(defparameter *kill-hash-table* (make-hash-table))
 
 (defun construct-kill-hashtable () ;;loop through each statement in statements if size of gen
 	;;shoof (car gen) mawgod fel hashtable ? push-back fel associated vector (cdr gen) ;; : e3mel key fel hashtable bel car w e3mel array feeha cdr"

@@ -74,10 +74,8 @@
 	(prog1
 			(when (eql *last-stmt* *index*)
 				(case (car (statement stmt)) ; if branch, finialize the current basic block
-					(if
-					 `(,(finish-bb) ,(if2-to-bb)))
-					((unless when)
-					 `(,(finish-bb) ,(if1-to-bb)))
+					(if            (apply #'append `(,(list (finish-bb)) ,(if2-to-bb))))
+					((unless when) `(,(finish-bb) ,(if1-to-bb)))
 					(otherwise	; keep slurping next stmt into current block until we meet a branch
 					 (incf *last-stmt*))))
 		(incf *index*)))
@@ -90,7 +88,7 @@
 		(declare (special *frst-stmt* *last-stmt* *index* *length*))
 		(let ((bblocks (mapcar #'stmt-to-basic-block
 													 statements)))
-			(remove-if-not (lambda (x) (and (listp x) (not (null x)))) (append bblocks (list  (finish-bb)))))))
+			(apply #'append (remove-if-not (lambda (x) (and (listp x) (not (null x)))) (append bblocks (list  (finish-bb))))))))
 
 
 (defun frst-stmt-predecessors ()

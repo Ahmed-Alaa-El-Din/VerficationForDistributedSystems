@@ -85,11 +85,13 @@
 	(let ((*frst-stmt* 0)
 				(*last-stmt* 0))
 		(declare (special *frst-stmt* *last-stmt*))
-		(let ((bblocks (apply #'append (remove-if #'numberp (mapcar #'stmt-to-basic-block statements)))))
+		(let ((bblocks (apply #'append
+													(remove-if #'numberp
+																		 (mapcar #'stmt-to-basic-block
+																						 statements)))))
 			(decf *last-stmt*)
-																				;(append bblocks (make-basic-block '(-1 -2)))
-			bblocks
-			)))
+			;;(append bblocks (make-basic-block '(-1 -2)))
+			bblocks)))
 
 (defun frst-stmt-predecessors ()
 	"loop through basic blocks w a5ali l predecessors bto3 l frst-stmt bta3 l block yeb2o vector of last-stmt-indexes of predecessors"

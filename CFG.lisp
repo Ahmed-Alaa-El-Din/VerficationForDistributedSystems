@@ -53,10 +53,9 @@
 	(prog1
 			(make-instance 'basic-block
 										 :frst-stmt *frst-stmt*
-										 :last-stmt *last-stmt*
+										 :last-stmt (min *last-stmt* (1- *length*))
 										 :predecessor-blocks predecessors)
 		(setf *frst-stmt* (incf *last-stmt*))))
-
 ;; (defun push-basic-block (predecessors)
 ;;	(vector-push-extend (make-instance 'basic-block
 ;;																		 :frst-stmt *frst-stmt*
@@ -64,34 +63,35 @@
 ;;																		 :predecessor-blocks predecessors)
 ;;											*basic-blocks*)
 ;;	(setf *frst-stmt* (incf *last-stmt*)))
-
 (defun if2-to-bb ()
 	(mapcar #'make-basic-block '((-1) (-2)))) ; yes bb and no bb
-
 (defun if1-to-bb ()
-	(make-basic-block '(-1)))							; yes bb
-
+	(make-basic-block '(-1)))					; yes bb
 (defun finish-bb ()
-	(make-basic-block '(-1 -2)))					; -1 and -2 since the previous block must have been a branch. first bb is special case (todo)
-
+	(unless (>= *frst-stmt* *length*)
+		(make-basic-block '(-1 -2)))) ; -1 and -2 since the previous block must have been a branch. first bb is special case (todo)
 (defun stmt-to-basic-block (stmt)
-	(case (car (statement stmt))		; if branch, finialize the current basic block
-		(if							(apply #'append `(,(list (finish-bb)) ,(if2-to-bb))))
-		((unless when)	`(,(finish-bb) ,(if1-to-bb)))
-		(otherwise												; keep slurping next stmt into current block until we meet a branch
-		 (incf *last-stmt*))))
+	(prog1
+			(when (eql *last-stmt* *index*)
+				(case (car (statement stmt)) ; if branch, finialize the current basic block
+					(if
+					 `(,(finish-bb) ,(if2-to-bb)))
+					((unless when)
+					 `(,(finish-bb) ,(if1-to-bb)))
+					(otherwise	; keep slurping next stmt into current block until we meet a branch
+					 (incf *last-stmt*))))
+		(incf *index*)))
 
 (defun construct-basic-blocks (statements)
 	(let ((*frst-stmt* 0)
-				(*last-stmt* 0))
-		(declare (special *frst-stmt* *last-stmt*))
-		(let ((bblocks (apply #'append
-													(remove-if #'numberp
-																		 (mapcar #'stmt-to-basic-block
-																						 statements)))))
-			(decf *last-stmt*)
-			;;(append bblocks (make-basic-block '(-1 -2)))
-			bblocks)))
+				(*last-stmt* 0)
+				(*index*     0)
+				(*length* (length statements)))
+		(declare (special *frst-stmt* *last-stmt* *index* *length*))
+		(let ((bblocks (mapcar #'stmt-to-basic-block
+													 statements)))
+			(remove-if-not (lambda (x) (and (listp x) (not (null x)))) (append bblocks (list  (finish-bb)))))))
+
 
 (defun frst-stmt-predecessors ()
 	"loop through basic blocks w a5ali l predecessors bto3 l frst-stmt bta3 l block yeb2o vector of last-stmt-indexes of predecessors"
@@ -166,40 +166,13 @@
 														(unless (> y 30)
 															(print "y = 21"))
 														(square y)
-														(* x 2)))
+														(* x 2)
+														;; (unless (> y 30)
+														;;	(print "y = 21"))
+														))
 
 (construct-statement-vector parsed-code)
 (construct-basic-blocks)
 (frst-stmt-predecessors basic-blocks)
 (gen-and-initial-out )
 ;;(reaching-definitions *statements*)
-
-(#<BASIC-BLOCK :range 0   2   :pred (-1 -2) >
- #<BASIC-BLOCK :range 3   3   :pred (-1)    >
- #<BASIC-BLOCK :range 4   4   :pred (-2)    >
- #<BASIC-BLOCK :range 5   10  :pred (-1 -2) >
- #<BASIC-BLOCK :range 11  11  :pred (-1)    >
- #<BASIC-BLOCK :range 12  15  :pred (-1 -2) >
- #<BASIC-BLOCK :range 16  16  :pred (-1)    >)
-
- 0 (#<STMT-BLOCK :stmt (SETQ X 12)          :pred (-1)>
- 1  #<STMT-BLOCK :stmt (SETQ Y 21)          :pred (-1)>
- 2  #<STMT-BLOCK :stmt (IF (= Y 12))        :pred (-1)>
-
- 3  #<STMT-BLOCK :stmt (SETQ Y (* Y 2))     :pred (-1)>
-
- 4  #<STMT-BLOCK :stmt (SETQ X 42)          :pred (-2)>
-
- 5  #<STMT-BLOCK :stmt (SETQ W 12)          :pred (-1)>
- 6  #<STMT-BLOCK :stmt (+ 2 3)              :pred (-1)>
- 7  #<STMT-BLOCK :stmt (SETF Z 22)          :pred (-1)>
- 8  #<STMT-BLOCK :stmt (WHEN (> X 20))      :pred (-1)>
- 9  #<STMT-BLOCK :stmt (SETQ X (+ X 1))     :pred (-1)>
-10  #<STMT-BLOCK :stmt (SETQ ZZ 18)         :pred (-1)>
-
-11  #<STMT-BLOCK :stmt (* 3 W)              :pred (-1)>
-
-12  #<STMT-BLOCK :stmt (UNLESS (> Y 30))    :pred (-1)>
-13  #<STMT-BLOCK :stmt (PRINT y = 21)       :pred (-1)>
-14  #<STMT-BLOCK :stmt (SQUARE Y)           :pred (-1)>
-15  #<STMT-BLOCK :stmt (* X 2)              :pred (-1)>)

@@ -1,9 +1,11 @@
 (defparameter *basic-blocks* (make-array 1 :fill-pointer 0 :adjustable t))
 (defparameter *statements*   (make-array 1 :fill-pointer 0 :adjustable t))
+(defparameter *kill-hash-table* (make-hash-table))
+
 (defclass stmt-block ()
 	((statement								:accessor statement								:initarg :statement )
 	 (predecessor-statements	:accessor predecessor-statements	:initarg :predecessor-statements)
-	 (gen											:accessor gen)
+	 (gen											:accessor gen   :initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (kill										:accessor kill	:initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (in											:accessor in		:initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (out											:accessor out		:initform (make-array 1 :fill-pointer 0 :adjustable t))))
@@ -79,7 +81,6 @@
 					(otherwise	; keep slurping next stmt into current block until we meet a branch
 					 (incf *last-stmt*))))
 		(incf *index*)))
-
 (defun construct-basic-blocks (statements)
 	(let ((*frst-stmt* 0)
 				(*last-stmt* 0)
@@ -89,7 +90,6 @@
 		(let ((bblocks (mapcar #'stmt-to-basic-block
 													 statements)))
 			(apply #'append (remove-if-not (lambda (x) (and (listp x) (not (null x)))) (append bblocks (list  (finish-bb))))))))
-
 
 (defun frst-stmt-predecessors ()
 	"loop through basic blocks w a5ali l predecessors bto3 l frst-stmt bta3 l block yeb2o vector of last-stmt-indexes of predecessors"
@@ -109,14 +109,14 @@
 ;;;;; DFG ;;;;;
 
 (defun gen-and-initial-out ()
-	(loop
-		 :for stmt :accross *statements*
-		 :for x :from 0
-		 :do (let ((stmt-out (make-array 1 :fill-pointer 0 :adjustable t)))
+	(loop :for x :from 0 :to (1- (length statements))
+		 :do (let ((stmt (statement (elt statements x)))
+							 (stmt-block (elt statements x))
+							 (stmt-gen-out (make-array 1 :fill-pointer 0 :adjustable t)))
 					 (when (or (eq (car stmt) 'setq)(eq (car stmt) 'setf))
-						 (setf (gen stmt) (cons (nth 1 stmt) x))
-						 (vector-push-extend (gen stmt) stmt-out)
-						 (setf (out stmt) stmt-out)))))
+						 (vector-push-extend  (cons (nth 1 stmt) x) stmt-gen-out)
+						 (setf (gen stmt-block) stmt-gen-out)
+						 (setf (out stmt-block) stmt-gen-out)))))
 
 (defun vector-union (v w)
 	(remove-duplicates (merge 'vector v w #'equalp) :test #'equalp))
@@ -148,29 +148,129 @@
 		(loop for predecessor-index being the element of (predecessor-statements statement)
 			 do (setf in (vector-union in (out (elt *statements* predecessor-index)))))
 		in))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter parsed-code '((setq x 12)
-														(setq y 21)
-														(if (= y 12)
-																(setq y (* y 2))
-																(setq x 42))
-														(setq w 12)
-														(+ 2 3)
-														(setf z 22)
-														(when (> x 20)
-															(setq x (+ x 1)))
-														(setq zz 18)
-														(* 3 w)
-														(unless (> y 30)
-															(print "y = 21"))
-														(square y)
-														(* x 2)
-														;; (unless (> y 30)
-														;;	(print "y = 21"))
-														))
 
-(construct-statement-vector parsed-code)
-(construct-basic-blocks)
-(frst-stmt-predecessors basic-blocks)
-(gen-and-initial-out )
-;;(reaching-definitions *statements*)
+
+(defun construct-kill-hashtable () ;;loop through each statement in statements if size of gen
+	;;shoof (car gen) mawgod fel hashtable ? push-back fel associated vector (cdr gen) ;; : e3mel key fel hashtable bel car w e3mel array feeha cdr"
+	(loop :for stmt :accross statements :do
+		 (unless (zerop (length (gen stmt)))
+			 (let ((associated-vector (make-array 1 :fill-pointer 0 :adjustable t))
+						 (gen-cons (elt (gen stmt) 0)))
+				 (if (gethash (car gen-cons) *kill-hash-table*)
+						 (progn (setf associated-vector (gethash (car gen-cons) *kill-hash-table*))
+										(vector-push-extend (cdr gen-cons) associated-vector)
+										(setf (gethash (car gen-cons) *kill-hash-table*) associated-vector))
+						 (progn (vector-push-extend (cdr gen-cons) associated-vector)
+										(setf (gethash (car gen-cons) *kill-hash-table*) associated-vector)))))))
+(defun kill-set ()
+	(loop :for stmt :accross statements :do
+		 (let ((kill-vector (make-array 1 :fill-pointer 0 :adjustable t)))
+			 (unless (zerop (length (gen stmt)))
+				 (loop :for x :accross (gethash (car (elt (gen stmt) 0)) *kill-hash-table*)
+						:do
+						(vector-push-extend (cons (car (elt (gen stmt) 0)) x) kill-vector))
+				 (setf (kill stmt) kill-vector)))))
+
+(defun value-circle (statement-index)
+	;;(let ((gen-cons (gen (elt statements statement-index))))
+	(let ((inputs (cdr (nth 2 (statement (elt statements statement-index)))))
+				(value-hash-table (make-hash-table))
+				(in-in-set? nil))
+		(loop :for input :in inputs :do
+			 (loop :for in-element :accross  (in (elt statements statement-index)) :do
+					(when (eq input (car in-element))
+						(setf (gethash in-element value-hash-table) (value-circle (cdr in-element)))
+						(setf in-in-set? t)))
+			 (unless in-in-set?
+				 (setf (gethash (cons input statement-index)value-hash-table)nil)))
+		value-hash-table))
+
+
+(defun traverse-hash-table (ht)
+	(if ht
+			(maphash #'(lambda (key associated-value)
+									 (format t "~a: ~%" key)
+									 ;;(unless associated-value
+									 ;;(traverse-hash-table associated-value)))ht))
+									 ;;(if ht (print(hash-table-count associated-value)) (print 0)))ht))
+									 (if ht (traverse-hash-table associated-value) (print "nil")))ht)
+			(print "nil")))
+
+
+
+
+
+
+
+
+;;main
+
+(defparameter aggan-parsed-code '(
+																	(setq input (+ 2 3))
+																	(send-to-other-process input)
+																	(setq received (recv-from other-process))
+																	(setq decision (min input received))
+																	(return decision))
+
+
+	(construct-statement-vector parsed-code)
+	(construct-basic-blocks)
+	(leader-predecessors basic-blocks)
+	(gen-and-initial-out )
+	(construct-kill-hashtable)
+	(kill-set)
+	(reaching-definitions statements)
+
+
+
+
+	(loop :for x :from 0 :to (1- (length statements)) :do
+		 (format t "statement ~a: ~%gen: " x)
+		 (loop :for g :accross (gen (elt statements
+
+																										 x)) :do
+				(format t "~a " g))
+		 (format t "~%kill: ")
+		 (loop :for k :accross (kill (elt statements
+
+																											x)) :do
+				(format t "~a " k))
+		 (format t "~%in: ")
+		 (loop :for i :accross (in (elt statements
+
+																										x)) :do
+				(format t "~a " i))
+		 (format t "~%out: ")
+		 (loop :for o :accross (out (elt statements
+
+																										 x)) :do
+				(format t "~a " o))
+		 (format t"~%"))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	(defparameter parsed-code '((setq x 12)
+															(setq y 21)
+															(if (= y 12)
+																	(setq y (* y 2))
+																	(setq x 42))
+															(setq w 12)
+															(+ 2 3)
+															(setf z 22)
+															(when (> x 20)
+																(setq x (+ x 1)))
+															(setq zz 18)
+															(* 3 w)
+															(unless (> y 30)
+																(print "y = 21"))
+															(square y)
+															(* x 2)
+															;; (unless (> y 30)
+															;;	(print "y = 21"))
+															))
+
+	(construct-statement-vector parsed-code)
+	(construct-basic-blocks)
+	(frst-stmt-predecessors basic-blocks)
+	(gen-and-initial-out )
+	;;(reaching-definitions *statements*)

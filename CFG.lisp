@@ -196,22 +196,14 @@
 									 (if ht (traverse-hash-table associated-value) (print "nil")))ht)
 			(print "nil")))
 
-
-
-
-
-
-
-
 ;;main
 
-(defparameter aggan-parsed-code '(
-																	(setq input (+ 2 3))
-																	(send-to-other-process input)
-																	(setq received (recv-from other-process))
-																	(setq decision (min input received))
-																	(return decision)))
-
+(defparameter aggan-parsed-code
+	'((setq input (+ 2 3))
+		(send-to-other-process input)
+		(setq received (recv-from other-process))
+		(setq decision (min input received))
+		(return decision)))
 
 (construct-statement-vector parsed-code)
 (construct-basic-blocks)
@@ -221,32 +213,20 @@
 (kill-set)
 (reaching-definitions statements)
 
-
-
-
-(loop :for x :from 0 :to (1- (length statements)) :do
-	 (format t "statement ~a: ~%gen: " x)
-	 (loop :for g :accross (gen (elt statements
-
-																	 x)) :do
-			(format t "~a " g))
+(loop :for x :from 0 :to (1- (length statements))
+	 :do	 (format t "statement ~a: ~%gen: " x)
+	 (loop :for g :accross (gen (elt statements x))
+			:do				(format t "~a " g))
 	 (format t "~%kill: ")
-	 (loop :for k :accross (kill (elt statements
-
-																		x)) :do
-			(format t "~a " k))
+	 (loop :for k :accross (kill (elt statements x))
+			:do				(format t "~a " k))
 	 (format t "~%in: ")
-	 (loop :for i :accross (in (elt statements
-
-																	x)) :do
-			(format t "~a " i))
+	 (loop :for i :accross (in (elt statements x))
+			:do				(format t "~a " i))
 	 (format t "~%out: ")
-	 (loop :for o :accross (out (elt statements
-
-																	 x)) :do
-			(format t "~a " o))
+	 (loop :for o :accross (out (elt statements x))
+			:do				(format t "~a " o))
 	 (format t"~%"))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defparameter parsed-code '((setq x 12)

@@ -3,7 +3,8 @@
 (defparameter *kill-hash-table* (make-hash-table))
 
 (defclass stmt-block ()
-	((statement								:accessor statement								:initarg :statement )
+	((id                      :accessor id                      :initarg :id)
+	 (statement								:accessor statement								:initarg :statement)
 	 (predecessor-statements	:accessor predecessor-statements	:initarg :predecessor-statements)
 	 (gen											:accessor gen   :initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (kill										:accessor kill	:initform (make-array 1 :fill-pointer 0 :adjustable t))
@@ -11,10 +12,11 @@
 	 (out											:accessor out		:initform (make-array 1 :fill-pointer 0 :adjustable t))))
 (defmethod print-object ((this stmt-block) out)
 	(print-unreadable-object (this out :type t)
-		(format out ":stmt ~20a :pred ~a"
-						(statement this) (predecessor-statements this))))
+		(format out ":id ~3a :stmt ~20a :pred ~a"
+						(id this) (statement this) (predecessor-statements this))))
+(defvar *id* 0)
 (defun make-stmt-block (stmt predecessors)
-	(make-instance 'stmt-block :statement stmt :predecessor-statements predecessors))
+	(make-instance 'stmt-block :id (1- (incf *id*)) :statement stmt :predecessor-statements predecessors))
 ;; these convert a stmt to several stmt-blocks
 (defun convert-if2  (stmt)
 	(destructuring-bind (if cond yes no) stmt
@@ -34,6 +36,29 @@
 	(apply #'append
 				 (mapcar #'convert-stmt
 								 program-code)))
+
+(defparameter parsed-code '((setq x 12)
+														(setq y 21)
+														(if (= y 12)
+																(setq y (* y 2))
+																(setq x 42))
+														(setq w 12)
+														(+ 2 3)
+														(setf z 22)
+														(when (> x 20)
+															(setq x (+ x 1)))
+														(setq zz 18)
+														(* 3 w)
+														(unless (> y 30)
+															(print "y = 21"))
+														(square y)
+														(* x 2)
+														;; (unless (> y 30)
+														;;	(print "y = 21"))
+														))
+
+(let* ((statements (construct-statement-vector parsed-code)))
+	(format t "~a~%" statements))
 
 ;; (defun push-statement (stmt predecessors)
 ;;	(vector-push-extend (make-instance 'stmt-block
@@ -94,6 +119,14 @@
 		(let ((bblocks (mapcar #'stmt-to-basic-block
 													 statements)))
 			(apply #'append (remove-if-not (lambda (x) (and (listp x) (not (null x)))) (append bblocks (list  (finish-bb))))))))
+
+(defparameter parsed-code '(
+														(setq x 12)
+														))
+
+(let* ((statements (construct-statement-vector parsed-code))
+			 (bblocks (construct-basic-blocks statements)))
+	(format t "~a~%~a~%" statements bblocks))
 
 (defun frst-stmt-predecessors ()
 	"loop through basic blocks w a5ali l predecessors bto3 l frst-stmt bta3 l block yeb2o vector of last-stmt-indexes of predecessors"

@@ -177,6 +177,32 @@
 	      ))))
 
 
+(defun value-circle (statement-index)
+  ;;(let ((gen-cons (gen (elt statements statement-index))))
+  (let ((inputs (cdr (nth 2 (statement (elt statements statement-index)))))
+	(value-hash-table (make-hash-table))
+	(in-in-set? nil))
+    (loop :for input :in inputs :do
+       (loop :for in-element :being :the :element :of  (in (elt statements statement-index)) :do
+	  (when (eq input (car in-element))
+	    (setf (gethash in-element value-hash-table) (value-circle (cdr in-element)))
+	    (setf in-in-set? t)))
+       (unless in-in-set?
+	 (setf (gethash (cons input statement-index)value-hash-table)nil)))
+    value-hash-table))
+	       
+	      
+(defun traverse-hash-table (ht)
+  (if ht 
+  (maphash #'(lambda (key associated-value)
+	       (format t "~a: ~%" key)
+	       ;;(unless associated-value
+	       ;;(traverse-hash-table associated-value)))ht))
+	       ;;(if ht (print(hash-table-count associated-value)) (print 0)))ht))
+	       (if ht (traverse-hash-table associated-value) (print "nil")))ht)
+  (print "nil")))
+      
+       
 
 
 
@@ -184,6 +210,14 @@
 
 
 ;;main
+
+(defparameter aggan-parsed-code '(
+(setq input (+ 2 3))
+(send-to-other-process input)
+(setq received (recv-from other-process))
+(setq decision (min input received))
+(return decision))
+			     
 
 
 (defparameter parsed-code '((setq x 12)
@@ -216,19 +250,23 @@
 
 (loop :for x :from 0 :to (1- (length statements)) :do
 	    (format t "statement ~a: ~%gen: " x)
-	    (loop :for g :being :the :element :of (gen (elt statements 
+	    (loop :for g :being :the :element :of (gen (elt statements 
+
 x)) :do
 	       (format t "~a " g))
 	    (format t "~%kill: ")
-	    (loop :for k :being :the :element :of (kill (elt statements 
+	    (loop :for k :being :the :element :of (kill (elt statements 
+
 x)) :do
 	       (format t "~a " k))
 	    (format t "~%in: ")
-	    (loop :for i :being :the :element :of (in (elt statements 
+	    (loop :for i :being :the :element :of (in (elt statements 
+
 x)) :do
 	       (format t "~a " i))
 	    (format t "~%out: ")
-	    (loop :for o :being :the :element :of (out (elt statements 
+	    (loop :for o :being :the :element :of (out (elt statements 
+
 x)) :do
 	       (format t "~a " o)) 
 	    (format t"~%"))

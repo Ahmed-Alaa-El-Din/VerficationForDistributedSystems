@@ -10,32 +10,42 @@
 	 (kill										:accessor kill	:initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (in											:accessor in		:initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (out											:accessor out		:initform (make-array 1 :fill-pointer 0 :adjustable t))))
+
 (defmethod print-object ((this stmt-block) out)
 	(print-unreadable-object (this out :type t)
 		(format out ":id ~3a :stmt ~20a :pred ~a"
 						(id this) (statement this) (predecessor-statements this))))
-(defvar *id* 0)
-(defun make-stmt-block (stmt predecessors)
+
+(defparameter *id*)
+
+(defun make-stmt-block (stmt &key (predecessors  (1- *id*)))
 	(make-instance 'stmt-block :id (1- (incf *id*)) :statement stmt :predecessor-statements predecessors))
 ;; these convert a stmt to several stmt-blocks
+
 (defun convert-if2  (stmt)
 	(destructuring-bind (if cond yes no) stmt
-		`(,(make-stmt-block `(,if ,cond)	'(-1))
-			 ,(make-stmt-block yes					'(-1))
-			 ,(make-stmt-block no						'(-2)))))
+		(let* ((condition (make-stmt-block (list if cond)))
+					 (yes-branch (make-stmt-block yes))
+					 (no-branch (make-stmt-block no :predecessors (id condition))))
+			(list condition yes-branch no-branch))))
+
 (defun convert-if1  (stmt)
 	(destructuring-bind (if cond yes) stmt
-		`(,(make-stmt-block `(,if ,cond) '(-1))
-			 ,(make-stmt-block yes         '(-1)))))
+		`(,(make-stmt-block `(,if ,cond) )
+			 ,(make-stmt-block yes         ))))
+
 (defun convert-stmt (stmt)
 	(case (car stmt)
 		(if            (convert-if2 stmt))
 		((when unless) (convert-if1 stmt))
-		(otherwise `(,(make-stmt-block stmt '(-1))))))
+		(otherwise `(,(make-stmt-block stmt )))))
+
 (defun construct-statement-vector (program-code)
-	(apply #'append
-				 (mapcar #'convert-stmt
-								 program-code)))
+	(let ((*id* 0))
+		;;(declare (special *id*))
+		(apply #'append
+					 (mapcar #'convert-stmt
+									 program-code))))
 
 (defparameter parsed-code '((setq x 12)
 														(setq y 21)
@@ -115,7 +125,7 @@
 				(*last-stmt* 0)
 				(*index*     0)
 				(*length* (length statements)))
-		(declare (special *frst-stmt* *last-stmt* *index* *length*))
+		;;(declare (special *frst-stmt* *last-stmt* *index* *length*))
 		(let ((bblocks (mapcar #'stmt-to-basic-block
 													 statements)))
 			(apply #'append (remove-if-not (lambda (x) (and (listp x) (not (null x)))) (append bblocks (list  (finish-bb))))))))

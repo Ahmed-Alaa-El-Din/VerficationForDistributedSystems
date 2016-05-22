@@ -51,17 +51,34 @@
 	(or (dispatch (car stmt) stmt *stmt-dispatch*)
 			(list (make-stmt-block stmt))))
 
+(defun flatten-list (list)
+	(cond ((null list) nil)
+				((atom list) (list list))
+				(t (mapcan #'flatten-list list))))
+
+(defun find-pred-references (&key to in)
+	(flet ((refers-to-id (stmt) (member to (pred stmt))))
+		(mapcar #'id (remove-if-not #'refers-to-id in))))
+
+(defun convert-program (program-code)
+	(flatten-list (mapcar #'convert-stmt program-code)))
+
+(defun update-next-refs! (statements)
+	(flet ((update! (stmt)
+					 (setf (next stmt)
+								 (find-pred-references :to (id stmt)
+																			 :in statements))))
+		(mapc #'update! statements)))
+
+(defun surrogate-code (code)
+	(append '((BEGIN))
+					code
+					'((END))))
+
 (defun construct-statement-vector (program-code)
-	(let* ((*id* 0)
-				 (*next-pred* (list -1))
-				 (statements (apply #'append
-														(mapcar #'convert-stmt
-																		(append '((BEGIN)) program-code '((END)))))))
-		(map nil (lambda (x)
-							(let ((id (id x)))
-								(setf (next x) (mapcar #'id (remove-if-not (lambda (x) (member id (pred x))) statements)))))
-						statements)
-		statements))
+	(let ((*id* 0)
+				 (*next-pred* (list -1)))
+		(update-next-refs! (convert-program (surrogate-code program-code)))))
 
 (defparameter parsed-code '((setq x 12)
 														(setq y 21)

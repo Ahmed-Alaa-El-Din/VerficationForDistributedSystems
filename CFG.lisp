@@ -10,11 +10,12 @@
 
 (defmethod print-object ((this stmt-block) out)
 	(print-unreadable-object (this out :type t)
-		(format out ":id ~3a :stmt ~20a :pred ~8a :next ~a"
-						(id this) (statement this) (pred this) (next this))))
+		(format out ":stmt ~20a :id ~3a  :pred ~8a :next ~a"
+						(statement this) (id this) (pred this) (next this))))
 
 (defvar *id*)
 (defvar *next-pred*)
+
 (defun make-stmt-block (stmt &key (predecessors *next-pred*))
 	(prog1 (make-instance 'stmt-block
 												:id (1- (incf *id*))
@@ -29,7 +30,6 @@
 					 (yes-branch (make-stmt-block yes :predecessors (list (id condition))))
 					 (no-branch  (make-stmt-block no  :predecessors (list (id condition)))))
 			(setf *next-pred* (list (id yes-branch) (id no-branch)))
-			;;(setf (next condition) *next-pred*)
 			(list condition yes-branch no-branch))))
 
 (defun convert-if1  (stmt)
@@ -37,18 +37,19 @@
 		(let* ((condition  (make-stmt-block (list if cond)))
 					 (yes-branch (make-stmt-block yes :predecessors (list (id condition)))))
 			(setf *next-pred* (list (id condition) (id yes-branch)))
-			;;(setf (next condition) (list (id yes-branch)))
 			(list condition yes-branch))))
 
 (defvar *stmt-dispatch* `((if     . ,#'convert-if2)
 													(unless . ,#'convert-if1)
 													(when   . ,#'convert-if1)))
 
+(defun dispatch (key args dispatch)
+	(let ((fn (cdr (assoc key dispatch))))
+		(when fn (funcall fn args))))
+
 (defun convert-stmt (stmt)
-	(let ((fn (cdr (assoc (car stmt) *stmt-dispatch*))))
-		(if fn
-				(funcall fn stmt)
-				(list (make-stmt-block stmt)))))
+	(or (dispatch (car stmt) stmt *stmt-dispatch*)
+			(list (make-stmt-block stmt))))
 
 (defun construct-statement-vector (program-code)
 	(let* ((*id* 0)

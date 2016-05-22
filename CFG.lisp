@@ -1,7 +1,8 @@
 (defclass stmt-block ()
 	((id                      :accessor id                      :initarg :id)
 	 (statement								:accessor statement								:initarg :statement)
-	 (predecessor-statements	:accessor predecessor-statements	:initarg :predecessor-statements)
+	 (pred										:accessor pred										:initarg :pred)
+	 (next										:accessor next  :initform nil)
 	 (gen											:accessor gen   :initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (kill										:accessor kill	:initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (in											:accessor in		:initform (make-array 1 :fill-pointer 0 :adjustable t))
@@ -9,50 +10,53 @@
 
 (defmethod print-object ((this stmt-block) out)
 	(print-unreadable-object (this out :type t)
-		(format out ":id ~3a :stmt ~20a :pred ~a"
-						(id this) (statement this) (predecessor-statements this))))
+		(format out ":id ~3a :stmt ~20a :pred ~8a :next ~a"
+						(id this) (statement this) (pred this) (next this))))
 
-(defparameter *id* 0)
-(defparameter *next-pred* nil)
+(defvar *id*)
+(defvar *next-pred*)
 (defun make-stmt-block (stmt &key (predecessors *next-pred*))
 	(prog1 (make-instance 'stmt-block
 												:id (1- (incf *id*))
 												:statement stmt
-												:predecessor-statements predecessors)
+												:pred (if (equalp predecessors '(-1)) nil predecessors))
 		(setf *next-pred* (list (1- *id*)))))
 
 ;; these convert a stmt to several stmt-blocks
 (defun convert-if2  (stmt)
 	(destructuring-bind (if cond yes no) stmt
-		(let* ((condition (make-stmt-block (list if cond)))
+		(let* ((condition  (make-stmt-block (list if cond)))
 					 (yes-branch (make-stmt-block yes :predecessors (list (id condition))))
-					 (no-branch (make-stmt-block no :predecessors (list (id condition)))))
+					 (no-branch  (make-stmt-block no  :predecessors (list (id condition)))))
 			(setf *next-pred* (list (id yes-branch) (id no-branch)))
-			(list condition
-						yes-branch
-						no-branch))))
+			;;(setf (next condition) *next-pred*)
+			(list condition yes-branch no-branch))))
 
 (defun convert-if1  (stmt)
 	(destructuring-bind (if cond yes) stmt
-		(let* ((condition (make-stmt-block (list if cond)))
+		(let* ((condition  (make-stmt-block (list if cond)))
 					 (yes-branch (make-stmt-block yes :predecessors (list (id condition)))))
 			(setf *next-pred* (list (id condition) (id yes-branch)))
-			(list condition
-						yes-branch))))
+			;;(setf (next condition) (list (id yes-branch)))
+			(list condition yes-branch))))
 
 (defun convert-stmt (stmt)
 	(case (car stmt)
 		(if            (convert-if2 stmt))
 		((when unless) (convert-if1 stmt))
-		(otherwise `(,(make-stmt-block stmt )))))
+		(otherwise (list (make-stmt-block stmt)))))
 
 (defun construct-statement-vector (program-code)
-	(let ((*id* 0)
-				(*next-pred* (list -1)))
-		;;(declare (special *id*))
-		(apply #'append
-					 (mapcar #'convert-stmt
-									 program-code))))
+	(let* ((*id* 0)
+				 (*next-pred* (list -1))
+				 (statements (apply #'append
+														(mapcar #'convert-stmt
+																		program-code))))
+		(mapcar (lambda (x)
+							(let ((id (id x)))
+								(setf (next x) (mapcar #'id (remove-if-not (lambda (x) (member id (pred x))) statements)))))
+						statements)
+		statements))
 
 (defparameter parsed-code '((setq x 12)
 														(setq y 21)
@@ -132,7 +136,6 @@
 				(*last-stmt* 0)
 				(*index*     0)
 				(*length* (length statements)))
-		;;(declare (special *frst-stmt* *last-stmt* *index* *length*))
 		(let ((bblocks (mapcar #'stmt-to-basic-block
 													 statements)))
 			(apply #'append (remove-if-not (lambda (x) (and (listp x) (not (null x)))) (append bblocks (list  (finish-bb))))))))
@@ -157,7 +160,7 @@
 							:for predecessor
 							:accross (predecessor-blocks basic-block)
 							:do (vector-push-extend (last-stmt (elt *basic-blocks* predecessor)) pre))
-					 (setf (predecessor-statements
+					 (setf (pred
 									(elt *statements* (frst-stmt basic-block))) pre))))
 
 ;;;;; DFG ;;;;;
@@ -199,7 +202,7 @@
 
 (defun in-set (statement) ;;block .. magarabthash le7ad delwa2ti
 	(let ((in ))
-		(loop for predecessor-index being the element of (predecessor-statements statement)
+		(loop for predecessor-index being the element of (pred statement)
 			 do (setf in (vector-union in (out (elt *statements* predecessor-index)))))
 		in))
 

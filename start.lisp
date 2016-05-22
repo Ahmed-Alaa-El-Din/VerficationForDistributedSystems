@@ -10,7 +10,7 @@ exec sbcl --dynamic-space-size 25600 --script "$0" $@
 		(load quicklisp-init)))
 (load (compile-file "verifier.asd"))
 (asdf::load-system 'verifier)
-(cfg::main SB-EXT:*POSIX-ARGV*)
+(main::main SB-EXT:*POSIX-ARGV*)
 
 ;; Local Variables:
 ;; mode: common-lisp

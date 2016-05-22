@@ -1,4 +1,4 @@
-(in-package #:cfg)
+(in-package #:main)
 
 (defparameter parsed-code '((setq x 12)
 														(setq y 21)
@@ -23,5 +23,5 @@
 
 (defun main (&optional (argv nil))
 	(declare (ignore argv))
-	(let* ((statements (construct-statement-vector parsed-code)))
+	(let* ((statements (cfg::construct-statement-vector parsed-code)))
 		(format t "~a~%" statements))	)

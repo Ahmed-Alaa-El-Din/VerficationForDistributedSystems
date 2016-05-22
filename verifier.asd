@@ -9,4 +9,5 @@
 	:components ((:file "package")
 							 (:file "utils")
 							 (:file "CFG")
+							 (:file "basic-block")
 							 (:file "main")))

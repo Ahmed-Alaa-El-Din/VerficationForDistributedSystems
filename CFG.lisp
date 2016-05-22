@@ -40,11 +40,15 @@
 			;;(setf (next condition) (list (id yes-branch)))
 			(list condition yes-branch))))
 
+(defvar *stmt-dispatch* `((if     . ,#'convert-if2)
+													(unless . ,#'convert-if1)
+													(when   . ,#'convert-if1)))
+
 (defun convert-stmt (stmt)
-	(case (car stmt)
-		(if            (convert-if2 stmt))
-		((when unless) (convert-if1 stmt))
-		(otherwise (list (make-stmt-block stmt)))))
+	(let ((fn (cdr (assoc (car stmt) *stmt-dispatch*))))
+		(if fn
+				(funcall fn stmt)
+				(list (make-stmt-block stmt)))))
 
 (defun construct-statement-vector (program-code)
 	(let* ((*id* 0)
@@ -253,8 +257,8 @@
 
 (defparameter aggan-parsed-code
 	'((setq input (+ 2 3))
-		(send-to-other-process input)
-		(setq received (recv-from other-process))
+		(send input)
+		(setq received (recv))
 		(setq decision (min input received))
 		(return decision)))
 

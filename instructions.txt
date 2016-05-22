@@ -1,0 +1,12 @@
+1. Install quicklisp : https://www.quicklisp.org/beta/
+	 1. wget https://beta.quicklisp.org/quicklisp.lisp
+	 2. sbcl --load quicklisp.lisp
+	 3. (quicklisp-quickstart:install)
+	 4. (ql:add-to-init-file)
+	 5. (ql:quickload "quicklisp-slime-helper")
+	 6. add to ~/.emacs.d/init.el those two lines:
+					(load (expand-file-name "~/quicklisp/slime-helper.el"))
+					(setq inferior-lisp-program "sbcl")
+	 7. Evalute them : select them them M-x eval-region
+	 8. M-x slime-restart-inferior-lisp
+2. To run the application: ./start.lisp

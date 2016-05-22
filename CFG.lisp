@@ -59,17 +59,12 @@
 		((when unless) (convert-if1 stmt))
 		(t (list (make-stmt-block stmt)))))
 
-(defun flatten-list (list)
-	(cond ((null list) nil)
-				((atom list) (list list))
-				(t (mapcan #'flatten-list list))))
-
 (defun find-pred-references (&key to in)
 	(flet ((refers-to-id (stmt) (member to (pred stmt))))
 		(mapcar #'id (remove-if-not #'refers-to-id in))))
 
 (defun convert-program (program-code)
-	(flatten-list (mapcar #'convert-stmt program-code)))
+	(utils::flatten-list (mapcar #'convert-stmt program-code)))
 
 (defun update-next-refs! (statements)
 	(flet ((update! (stmt)

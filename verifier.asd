@@ -7,5 +7,6 @@
 	;;:depends-on (:iterate)
 	:serial t
 	:components ((:file "package")
+							 (:file "utils")
 							 (:file "CFG")
 							 (:file "main")))

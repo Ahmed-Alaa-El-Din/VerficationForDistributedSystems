@@ -51,8 +51,8 @@
 				 (*next-pred* (list -1))
 				 (statements (apply #'append
 														(mapcar #'convert-stmt
-																		program-code))))
-		(mapcar (lambda (x)
+																		(append '((BEGIN)) program-code '((END)))))))
+		(map nil (lambda (x)
 							(let ((id (id x)))
 								(setf (next x) (mapcar #'id (remove-if-not (lambda (x) (member id (pred x))) statements)))))
 						statements)
@@ -74,8 +74,8 @@
 															(print "y = 21"))
 														(square y)
 														(* x 2)
-														;; (unless (> y 30)
-														;;	(print "y = 21"))
+														(unless (> y 30)
+															(print "y = 21"))
 														))
 
 (let* ((statements (construct-statement-vector parsed-code)))

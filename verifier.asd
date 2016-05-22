@@ -10,4 +10,5 @@
 							 (:file "utils")
 							 (:file "statement")
 							 (:file "basic-block")
+							 (:file "dataflow")
 							 (:file "main")))

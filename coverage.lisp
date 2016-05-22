@@ -6,10 +6,10 @@
 
 ;;; Load some code, ensuring that it's recompiled with the new optimization
 ;;; policy.
-(asdf:oos 'asdf:load-op :verifier :force t)
+(asdf::load-system 'verifier :force t)
 
 ;;; Run the test suite.
-(cfg::main)
+(main::main)
 
 ;;; Produce a coverage report
 (sb-cover:report "/tmp/report/")

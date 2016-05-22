@@ -23,5 +23,7 @@
 
 (defun main (&optional (argv nil))
 	(declare (ignore argv))
-	(let* ((statements (cfg::construct-statement-vector parsed-code)))
+	(let* ((statements
+					(cfg::construct-statement-vector
+					 parsed-code)))
 		(format t "~a~%" statements))	)

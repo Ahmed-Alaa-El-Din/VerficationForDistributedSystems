@@ -36,8 +36,8 @@
 	(prog1
 			(when (eql *last-stmt* *index*)
 				(case (car (statement stmt)) ; if branch, finialize the current basic block
-					(if            `(,(list (finish-bb)) ,(if2-to-bb)))
-					((unless when) `(,(finish-bb) ,(if1-to-bb)))
+					(if            (list (finish-bb) (if2-to-bb)))
+					((unless when) (list (finish-bb) (if1-to-bb)))
 					(otherwise	; keep slurping next stmt into current block until we meet a branch
 					 (prog1 nil (incf *last-stmt*)))))
 		(incf *index*)))
@@ -54,10 +54,6 @@
 (defparameter parsed-code '(
 														(setq x 12)
 														))
-
-;; (let* ((statements (construct-statement-vector parsed-code))
-;;			 (bblocks (construct-basic-blocks statements)))
-;;	(format t "~a~%~a~%" statements bblocks))
 
 (defun frst-stmt-predecessors (*basic-blocks* *statements*)
 	"loop through basic blocks w a5ali l predecessors bto3 l frst-stmt bta3 l block yeb2o vector of last-stmt-indexes of predecessors"

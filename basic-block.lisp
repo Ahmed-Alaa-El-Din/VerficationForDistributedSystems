@@ -24,20 +24,24 @@
 
 (defun if2-to-bb ()
 	(mapcar #'make-basic-block '((-1) (-2)))) ; yes bb and no bb
+
 (defun if1-to-bb ()
 	(make-basic-block '(-1)))					; yes bb
+
 (defun finish-bb ()
 	(unless (>= *frst-stmt* *length*)
 		(make-basic-block '(-1 -2)))) ; -1 and -2 since the previous block must have been a branch. first bb is special case (todo)
+
 (defun stmt-to-basic-block (stmt)
 	(prog1
 			(when (eql *last-stmt* *index*)
 				(case (car (statement stmt)) ; if branch, finialize the current basic block
-					(if            (apply #'append `(,(list (finish-bb)) ,(if2-to-bb))))
+					(if            `(,(list (finish-bb)) ,(if2-to-bb)))
 					((unless when) `(,(finish-bb) ,(if1-to-bb)))
 					(otherwise	; keep slurping next stmt into current block until we meet a branch
-					 (incf *last-stmt*))))
+					 (prog1 nil (incf *last-stmt*)))))
 		(incf *index*)))
+
 (defun construct-basic-blocks (statements)
 	(let ((*frst-stmt* 0)
 				(*last-stmt* 0)
@@ -45,7 +49,7 @@
 				(*length* (length statements)))
 		(let ((bblocks (mapcar #'stmt-to-basic-block
 													 statements)))
-			(apply #'append (remove-if-not (lambda (x) (and (listp x) (not (null x)))) (append bblocks (list  (finish-bb))))))))
+			(utils::flatten-list (append bblocks (list  (finish-bb)))))))
 
 (defparameter parsed-code '(
 														(setq x 12)

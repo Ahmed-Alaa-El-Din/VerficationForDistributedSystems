@@ -8,6 +8,6 @@
 	:serial t
 	:components ((:file "package")
 							 (:file "utils")
-							 (:file "CFG")
+							 (:file "statement")
 							 (:file "basic-block")
 							 (:file "main")))

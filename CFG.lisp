@@ -41,17 +41,23 @@
 			(setf *next-pred* (list (id condition) (id yes-branch)))
 			(list condition yes-branch))))
 
-(defvar *stmt-dispatch* `((if     . ,#'convert-if2)
-													(unless . ,#'convert-if1)
-													(when   . ,#'convert-if1)))
+;; (defvar *stmt-dispatch* `((if     . ,#'convert-if2)
+;;													(unless . ,#'convert-if1)
+;;													(when   . ,#'convert-if1)))
 
-(defun dispatch (key args dispatch)
-	(let ((fn (cdr (assoc key dispatch))))
-		(when fn (funcall fn args))))
+;; (defun dispatch (key args dispatch)
+;;	(let ((fn (cdr (assoc key dispatch))))
+;;		(when fn (funcall fn args))))
+
+;; (defun convert-stmt (stmt)
+;;	(or (dispatch (car stmt) stmt *stmt-dispatch*)
+;;			(list (make-stmt-block stmt))))
 
 (defun convert-stmt (stmt)
-	(or (dispatch (car stmt) stmt *stmt-dispatch*)
-			(list (make-stmt-block stmt))))
+	(case (car stmt)
+		(if (convert-if2 stmt))
+		((when unless) (convert-if1 stmt))
+		(t (list (make-stmt-block stmt)))))
 
 (defun flatten-list (list)
 	(cond ((null list) nil)

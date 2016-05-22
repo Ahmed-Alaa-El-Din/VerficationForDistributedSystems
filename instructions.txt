@@ -10,3 +10,7 @@
 	 7. Evalute them : select them them M-x eval-region
 	 8. M-x slime-restart-inferior-lisp
 2. To run the application: ./start.lisp
+3. To run from repl:
+	 1. M-x slime-compile-and-load-file while in verifier.asd
+	 2. (asdf:oos 'asdf:load-op 'verifier) in REPL
+4. Coverage testing: compile and load coverage.lisp

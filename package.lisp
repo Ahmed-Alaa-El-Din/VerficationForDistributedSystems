@@ -1,3 +1,3 @@
 (defpackage :cfg
-	(:use :common-lisp :iterate :asdf)
+	(:use :common-lisp)
 	(:export main))

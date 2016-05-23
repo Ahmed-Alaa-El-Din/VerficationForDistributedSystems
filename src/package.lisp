@@ -1,18 +1,20 @@
-(defpackage #:utils
-	(:use #:common-lisp)
+(in-package :cl-user)
+(defpackage utils
+	(:use :cl)
 	(:export #:flatten-list))
 
-(defpackage #:statement
-	(:use #:common-lisp #:utils)
-	(:export #:statement #:block-id #:construct-statement-vector))
+(defpackage statement
+	(:use :cl :utils)
+	(:export #:statement #:block-id #:construct-statement-vector
+					 #:pred #:gen #:kill #:in #:out))
 
-(defpackage #:block
-	(:use #:common-lisp #:statement #:utils)
+(defpackage block
+	(:use :cl :statement :utils)
 	(:export #:construct-basic-blocks #:frst-stmt #:last-stmt))
 
-(defpackage #:dataflow
-	(:use :common-lisp #:statement #:block #:utils))
+(defpackage dataflow
+	(:use :cl :statement :block :utils))
 
-(defpackage #:main
-	(:use :common-lisp #:statement #:block)
+(defpackage main
+	(:use :cl :statement :block)
 	(:export #:main))

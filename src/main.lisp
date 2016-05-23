@@ -1,4 +1,4 @@
-(in-package #:main)
+(in-package :main)
 
 (defparameter parsed-code '((setq x 12)
 														(setq y 21)

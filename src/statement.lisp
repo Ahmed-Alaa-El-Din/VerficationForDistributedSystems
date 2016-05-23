@@ -1,4 +1,4 @@
-(in-package #:statement)
+(in-package :statement)
 
 (defclass stmt-block ()
 	((id                      :accessor id        :initarg :id)

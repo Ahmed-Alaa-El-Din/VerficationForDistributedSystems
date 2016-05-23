@@ -1,4 +1,4 @@
-(in-package #:utils)
+(in-package :utils)
 
 (defun flatten-list (list)
 	(cond ((null list) nil)

@@ -1,0 +1,17 @@
+* Verifier 
+
+** Usage
+
+** Installation
+
+** Author
+
++ Osama Ahmed, Moamen Hosam, Ahmed Alaa El-Din Gad Ziada, Mohammad Alaggan (mohammad.nabil.h@gmail.com)
+
+** Copyright
+
+Copyright (c) 2016 Osama Ahmed, Moamen Hosam, Ahmed Alaa El-Din Gad Ziada, Mohammad Alaggan (mohammad.nabil.h@gmail.com)
+
+** License
+
+Licensed under the MIT License.

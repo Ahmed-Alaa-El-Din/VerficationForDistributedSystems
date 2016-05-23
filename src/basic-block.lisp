@@ -1,4 +1,4 @@
-(in-package #:block)
+(in-package :block)
 
 (defclass basic-block ()
 	((id                  :accessor id                  :initarg :id)
@@ -59,10 +59,10 @@
 														(setq x 12)
 														))
 
-(defun frst-stmt-predecessors (*basic-blocks* *statements*)
+(defun frst-stmt-predecessors (basic-blocks statements)
 	"loop through basic blocks w a5ali l predecessors bto3 l frst-stmt bta3 l block yeb2o vector of last-stmt-indexes of predecessors"
 	(map nil (lambda (basic-block)
-						 (setf (pred (elt *statements* (frst-stmt basic-block)))
-									 (mapcar (lambda (predecessor) (last-stmt (elt *basic-blocks* predecessor)))
+						 (setf (pred (elt statements (frst-stmt basic-block)))
+									 (mapcar (lambda (predecessor) (last-stmt (elt basic-blocks predecessor)))
 													 (predecessor-blocks basic-block))))
-			 *basic-blocks*))
+			 basic-blocks))

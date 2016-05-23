@@ -1,15 +1,17 @@
-(in-package #:cfg)
+(in-package #:block)
 
 (defclass basic-block ()
-	((frst-stmt						:accessor frst-stmt						:initarg :frst-stmt)
+	((id                  :accessor id                  :initarg :id)
+	 (frst-stmt						:accessor frst-stmt						:initarg :frst-stmt)
 	 (last-stmt						:accessor last-stmt						:initarg :last-stmt)
 	 (next-block					:accessor next-block)
 	 (predecessor-blocks	:accessor predecessor-blocks	:initarg :predecessor-blocks)))
 (defmethod print-object ((this basic-block) out)
 	(print-unreadable-object (this out :type t)
-		(format out ":range ~3a ~3a :pred ~8a"
-						(frst-stmt this) (last-stmt this) (predecessor-blocks this))))
+		(format out ":id ~3a :range ~3a ~3a :pred ~8a"
+						(id this) (frst-stmt this) (last-stmt this) (predecessor-blocks this))))
 
+(defvar *id* 0)
 (defvar *frst-stmt*)
 (defvar *last-stmt*)
 (defvar *index*)
@@ -17,6 +19,7 @@
 (defun make-basic-block (predecessors)
 	(prog1
 			(make-instance 'basic-block
+										 :id (1- (incf *id*))
 										 :frst-stmt *frst-stmt*
 										 :last-stmt (min *last-stmt* (1- *length*))
 										 :predecessor-blocks predecessors)
@@ -35,6 +38,7 @@
 (defun stmt-to-basic-block (stmt)
 	(prog1
 			(when (eql *last-stmt* *index*)
+				(setf (block-id stmt) *id*)
 				(case (car (statement stmt)) ; if branch, finialize the current basic block
 					(if            (list (finish-bb) (if2-to-bb)))
 					((unless when) (list (finish-bb) (if1-to-bb)))
@@ -49,7 +53,7 @@
 				(*length* (length statements)))
 		(let ((bblocks (mapcar #'stmt-to-basic-block
 													 statements)))
-			(utils::flatten-list (list bblocks (finish-bb))))))
+			(flatten-list (list bblocks (finish-bb))))))
 
 (defparameter parsed-code '(
 														(setq x 12)

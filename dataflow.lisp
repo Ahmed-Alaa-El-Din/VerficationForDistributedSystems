@@ -1,4 +1,4 @@
-(in-package #:cfg)
+(in-package #:dataflow)
 ;;;;; DFG ;;;;;
 
 (defun gen-and-initial-out (*statements*)

@@ -1,10 +1,11 @@
-(in-package #:cfg)
+(in-package #:statement)
 
 (defclass stmt-block ()
 	((id                      :accessor id                      :initarg :id)
 	 (statement								:accessor statement								:initarg :statement)
 	 (pred										:accessor pred										:initarg :pred)
 	 (next										:accessor .next  :initform nil)
+	 (block-id                :accessor block-id :initform nil)
 	 (gen											:accessor gen   :initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (kill										:accessor kill	:initform (make-array 1 :fill-pointer 0 :adjustable t))
 	 (in											:accessor .in		:initform (make-array 1 :fill-pointer 0 :adjustable t))
@@ -12,8 +13,8 @@
 
 (defmethod print-object ((this stmt-block) out)
 	(print-unreadable-object (this out :type t)
-		(format out ":stmt ~20a :id ~3a  :pred ~8a :next ~a"
-						(statement this) (id this) (pred this) (.next this))))
+		(format out ":s ~17a :id ~3a :p ~8a :n ~2a :b ~a"
+						(statement this) (id this) (pred this) (.next this) (block-id this))))
 
 (defvar *id*)
 (defvar *next-pred*)
@@ -64,7 +65,7 @@
 		(mapcar #'id (remove-if-not #'refers-to-id in))))
 
 (defun convert-program (program-code)
-	(utils::flatten-list (mapcar #'convert-stmt program-code)))
+	(flatten-list (mapcar #'convert-stmt program-code)))
 
 (defun update-next-refs! (statements)
 	(flet ((update! (stmt)

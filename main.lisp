@@ -23,10 +23,10 @@
 
 (defun main (&optional (argv nil))
 	(declare (ignore argv))
-	(let* ((statements (cfg::construct-statement-vector parsed-code))
-				 (basic-blocks (cfg::construct-basic-blocks statements)))
+	(let* ((statements (construct-statement-vector parsed-code))
+				 (basic-blocks (construct-basic-blocks statements)))
 		(format t "~a~%~%~a~%~%" statements basic-blocks)
 		(loop :for bb :in basic-blocks
-			 :do (loop :for x :from (cfg::frst-stmt bb) :to (cfg::last-stmt bb)
+			 :do (loop :for x :from (frst-stmt bb) :to (last-stmt bb)
 							:do (format t "~a~%" (elt statements x)))
 			 (format t "~%"))))

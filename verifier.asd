@@ -7,10 +7,12 @@
 
 (asdf:defsystem #:verifier
 	;;:depends-on (:iterate)
-	:serial t
-	:components ((:file "package")
-							 (:file "utils")
-							 (:file "statement")
-							 (:file "basic-block")
-							 (:file "dataflow")
-							 (:file "main")))
+	:components
+	((:module :src
+						:serial t
+						:components ((:file "package")
+												 (:file "utils")
+												 (:file "statement")
+												 (:file "basic-block")
+												 (:file "dataflow")
+												 (:file "main")))))

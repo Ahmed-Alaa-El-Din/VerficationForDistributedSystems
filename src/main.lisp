@@ -1,6 +1,6 @@
 (in-package :main)
 
-(defparameter parsed-code '((setq x 12)
+(defvar *parsed-code* '((setq x 12)
 														(setq y 21)
 														(if (= y 12)
 																(setq y (* y 2))
@@ -23,7 +23,7 @@
 
 (defun main (&optional (argv nil))
 	(declare (ignore argv))
-	(let* ((statements (construct-statement-vector parsed-code))
+	(let* ((statements (construct-statement-vector *parsed-code*))
 				 (basic-blocks (construct-basic-blocks statements)))
 		(format t "~a~%~%~a~%~%" statements basic-blocks)
 		(loop :for bb :in basic-blocks

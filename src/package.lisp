@@ -5,8 +5,10 @@
 
 (defpackage statement
 	(:use :cl :utils)
-	(:export #:statement #:block-id #:construct-statement-vector
-					 #:pred #:gen #:kill #:in #:out))
+	(:export #:stmt-block
+					 #:construct-statement-vector
+					 #:statement #:id #:pred #:next #:block-id
+					 #:gen #:kill #:in #:out))
 
 (defpackage block
 	(:use :cl :statement :utils)

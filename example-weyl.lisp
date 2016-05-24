@@ -24,6 +24,22 @@ exec sbcl --dynamic-space-size 25600 --script "$0" $@
 
 (in-package :weyl-test)
 
+
+
+
+#|
+(let* ((F (get-finite-field 41))
+			 (P (get-polynomial-ring F '(x))))
+	(format t "~A~%~A~%~A~%" F P (coerce (+ (expt 'x 3) (* 2 (expt 'x 2)) 'x 1)
+																			 P)))
+(defvar r)
+(defvar a)
+(setq r (get-polynomial-ring (get-rational-numbers) '(x y)))
+(setq a (make-ideal r (+ (* 'x 'x 'x) (* 'y 'y) (* 'x 'y))))
+|#
+
+
+#|
 (let* ((Z (get-rational-integers))
 			 (R (get-polynomial-ring Z '(mu eps sigma)))
 			 (sigma (coerce 'sigma R))
@@ -95,7 +111,7 @@ exec sbcl --dynamic-space-size 25600 --script "$0" $@
 (let* ((q (get-quaternion-domain (get-rational-numbers)))
 			 (a (make-element q 1 -1/2 3/4 4/5)))
 	(format t "~a~%" (* a a a)))
-
+|#
 ;; Local Variables:
 ;; mode: common-lisp
 ;; End:

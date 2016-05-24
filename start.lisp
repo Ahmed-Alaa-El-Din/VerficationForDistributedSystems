@@ -8,6 +8,7 @@ exec sbcl --dynamic-space-size 25600 --script "$0" $@
 																			 (user-homedir-pathname))))
 	(when (probe-file quicklisp-init)
 		(load quicklisp-init)))
+
 (load (compile-file "verifier.asd"))
 (asdf::load-system 'verifier)
 (main::main SB-EXT:*POSIX-ARGV*)

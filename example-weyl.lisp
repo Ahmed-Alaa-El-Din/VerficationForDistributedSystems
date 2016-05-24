@@ -95,3 +95,7 @@ exec sbcl --dynamic-space-size 25600 --script "$0" $@
 (let* ((q (get-quaternion-domain (get-rational-numbers)))
 			 (a (make-element q 1 -1/2 3/4 4/5)))
 	(format t "~a~%" (* a a a)))
+
+;; Local Variables:
+;; mode: common-lisp
+;; End:

@@ -1,8 +1,7 @@
 (defclass statement-block ()
   ( (statement :accessor statement
 	       :initarg :statement )
-   (gen :accessor gen :initform (make-array 1 :fill-pointer 0 :adjustable t))
-    ;; initform was nil 
+    (gen :accessor gen :initform (make-array 1 :fill-pointer 0 :adjustable t))
     (kill :accessor kill
 	  :initform (make-array 1 :fill-pointer 0 :adjustable t))
     (in :accessor in
@@ -26,6 +25,7 @@
 (defparameter basic-blocks (make-array 1 :fill-pointer 0 :adjustable t))
 (defparameter statements (make-array 1 :fill-pointer 0 :adjustable t))
 (defparameter kill-hash-table (make-hash-table))
+(defparameter linkage-hash-table (make-hash-table))
 
 
 (defun return-condition (condition-statement) ;;like (if (= y 12))
@@ -117,6 +117,9 @@
 (defun vector-union (v w)
   (remove-duplicates (merge 'vector v w #'equalp) :test #'equalp))
 
+(defun equalp-considering-sorting (v w)"assuming unique elements in each vector"
+  (eq (length v) (length (vector-union v w))))
+
 (defun vector-difference (v w)
   (loop for x being the element of w
      do
@@ -133,7 +136,8 @@
 	      (setf (in stmt) (in-set stmt))
 	      (setf old-out (out stmt))
 	      (setf (out stmt) (vector-union (gen stmt) (vector-difference (in stmt)(kill stmt))))
-	      (unless (equalp (out stmt) old-out);;without consedring sorting
+	      ;;(unless (equalp (out stmt) old-out);;without consedring sorting
+	      (unless (equalp-considering-sorting (out stmt) old-out)
 		(setf change t)
 		)))))
 	 
@@ -178,31 +182,60 @@
 
 
 (defun value-circle (statement-index)
-  ;;(let ((gen-cons (gen (elt statements statement-index))))
-  (let ((inputs (cdr (nth 2 (statement (elt statements statement-index)))))
+  (let ((inputs (if (atom (nth 2 (statement (elt statements statement-index))))
+		    (list (nth 2 (statement (elt statements statement-index))))
+		    (cdr (nth 2 (statement (elt statements statement-index))))))
 	(value-hash-table (make-hash-table))
 	(in-in-set? nil))
-    (loop :for input :in inputs :do
+    ;; ana ha3oz l value-circle fel setq,setf,send-to-other-process .. l variable elly ana ba3oz l value circle bta3o bieb2a (nth 2),(nth 2),(nth 1)
+    (when (eq (car (statement (elt statements statement-index))) 'send-to-other-process ) (setq inputs (list(nth 1 (statement (elt statements statement-index)))))) ;; assuming that the parameter of send-to.. isn't a function "full view communication"
+    (mapcar (lambda (input)    
        (loop :for in-element :being :the :element :of  (in (elt statements statement-index)) :do
 	  (when (eq input (car in-element))
 	    (setf (gethash in-element value-hash-table) (value-circle (cdr in-element)))
 	    (setf in-in-set? t)))
-       (unless in-in-set?
-	 (setf (gethash (cons input statement-index)value-hash-table)nil)))
+       (if in-in-set?
+	   (setf in-in-set? nil)
+	   (setf (gethash (cons input statement-index)value-hash-table)nil)))inputs)
     value-hash-table))
 	       
 	      
 (defun traverse-hash-table (ht)
   (if ht 
   (maphash #'(lambda (key associated-value)
-	       (format t "~a: ~%" key)
-	       ;;(unless associated-value
-	       ;;(traverse-hash-table associated-value)))ht))
-	       ;;(if ht (print(hash-table-count associated-value)) (print 0)))ht))
-	       (if ht (traverse-hash-table associated-value) (print "nil")))ht)
-  (print "nil")))
-      
-       
+	       (format t "new hashtable : ~a: ~%" key)
+	       (if (eq key 'decision-function) ;;for linkage-hash-table only
+		   (format t "~a ~%" associated-value)
+		   (traverse-hash-table associated-value)))ht)
+  (format t "nil ~%")))
+
+
+(defun fill-linkage-hash-table ()
+  (loop :for stmt :being :the :element :of statements :do
+     (cond ((eq (car (statement stmt)) 'send-to-other-process)
+	    (loop :for in-element :being :the :element :of (in stmt) :do
+	       (when (eq (car in-element) (nth 1 (statement stmt)))
+		 (setf (gethash 'input1 linkage-hash-table) (value-circle (cdr in-element))) (setf (gethash 'input2 linkage-hash-table) (value-circle (cdr in-element))))))
+		      ;;nth 2 3ashan mafrod tkon l form (setq x (recv-from,,,))
+	    ((eq (car (nth 2 (statement stmt))) 'recv-from-other-process)
+	    (setf (gethash 'recieved1 linkage-hash-table) (gethash 'input2 linkage-hash-table))
+	     (setf (gethash 'recieved2 linkage-hash-table) (gethash 'input1 linkage-hash-table)))))
+
+  ;; pushing decision function
+  (let ((stmt (if (eq (car (statement (elt statements (1- (length statements))))) 'return)
+		  ;;(cdr (statement (elt statements (1- (length statements))))) "returns list even if one element"
+		  (nth 1 (statement (elt statements (1- (length statements)))))
+		  (statement (elt statements (1- (length statements)))))))
+    (if (atom stmt)
+	(setf (gethash 'decision-function linkage-hash-table) #'_identity)
+        (setf (gethash 'decision-function linkage-hash-table) (car stmt)))))
+	
+  
+
+(defun _identity (x)
+  x)
+	    
+     
 
 
 
@@ -212,11 +245,15 @@
 ;;main
 
 (defparameter aggan-parsed-code '(
-(setq input (+ 2 3))
+(setq x (* 2 3))
+(setq y (+ 44 55))
+(setq w (square x))
+(setq z (* y w 4))
+(setq input (+ z w))
 (send-to-other-process input)
-(setq received (recv-from other-process))
+(setq received (recv-from-other-process))
 (setq decision (min input received))
-(return decision))
+(return decision)))
 			     
 
 
@@ -237,36 +274,30 @@
 (square y)
 (* x 2)))
 
-(construct-statement-vector parsed-code)
+(construct-statement-vector aggan-parsed-code)
 (construct-basic-blocks)
 (leader-predecessors basic-blocks)
 (gen-and-initial-out )
 (construct-kill-hashtable)
 (kill-set)
 (reaching-definitions statements)
+(fill-linkage-hash-table)
+(traverse-hash-table linkage-hash-table)
 
 
 
 
 (loop :for x :from 0 :to (1- (length statements)) :do
-	    (format t "statement ~a: ~%gen: " x)
-	    (loop :for g :being :the :element :of (gen (elt statements 
-
-x)) :do
+	    (format t "statement ~a \"~a \": ~%gen: " x (statement (elt statements x)))
+	    (loop :for g :being :the :element :of (gen (elt statements x)) :do
 	       (format t "~a " g))
 	    (format t "~%kill: ")
-	    (loop :for k :being :the :element :of (kill (elt statements 
-
-x)) :do
+	    (loop :for k :being :the :element :of (kill (elt statements x)) :do
 	       (format t "~a " k))
 	    (format t "~%in: ")
-	    (loop :for i :being :the :element :of (in (elt statements 
-
-x)) :do
+	    (loop :for i :being :the :element :of (in (elt statements x)) :do
 	       (format t "~a " i))
 	    (format t "~%out: ")
-	    (loop :for o :being :the :element :of (out (elt statements 
-
-x)) :do
+	    (loop :for o :being :the :element :of (out (elt statements x)) :do
 	       (format t "~a " o)) 
 	    (format t"~%"))

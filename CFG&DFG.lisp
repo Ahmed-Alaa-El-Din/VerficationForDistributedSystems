@@ -118,7 +118,9 @@
   (remove-duplicates (merge 'vector v w #'equalp) :test #'equalp))
 
 (defun equalp-considering-sorting (v w)"assuming unique elements in each vector"
-  (eq (length v) (length (vector-union v w))))
+       (eq (length v) (length (vector-union v w))))
+
+  
 
 (defun vector-difference (v w)
   (loop for x being the element of w
@@ -182,11 +184,12 @@
 
 
 (defun value-circle (statement-index)
-  (let ((inputs (if (atom (nth 2 (statement (elt statements statement-index))))
-		    (list (nth 2 (statement (elt statements statement-index))))
-		    (cdr (nth 2 (statement (elt statements statement-index))))))
+  (let* ((func nil) 
+	(inputs (if (atom (nth 2 (statement (elt statements statement-index))))
+		    (progn (setf func #'_identity) (list (nth 2 (statement (elt statements statement-index)))))
+		    (progn (setq func (car (nth 2 (statement (elt statements statement-index))))) (cdr (nth 2 (statement (elt statements statement-index)))))))
 	(value-hash-table (make-hash-table))
-	(in-in-set? nil))
+	 (in-in-set? nil))
     ;; ana ha3oz l value-circle fel setq,setf,send-to-other-process .. l variable elly ana ba3oz l value circle bta3o bieb2a (nth 2),(nth 2),(nth 1)
     (when (eq (car (statement (elt statements statement-index))) 'send-to-other-process ) (setq inputs (list(nth 1 (statement (elt statements statement-index)))))) ;; assuming that the parameter of send-to.. isn't a function "full view communication"
     (mapcar (lambda (input)    
@@ -197,6 +200,7 @@
        (if in-in-set?
 	   (setf in-in-set? nil)
 	   (setf (gethash (cons input statement-index)value-hash-table)nil)))inputs)
+    (setf (gethash 'function value-hash-table) func)
     value-hash-table))
 	       
 	      
@@ -204,7 +208,7 @@
   (if ht 
   (maphash #'(lambda (key associated-value)
 	       (format t "new hashtable : ~a: ~%" key)
-	       (if (eq key 'decision-function) ;;for linkage-hash-table only
+	       (if (or (eq key 'decision-function)(eq key 'function)) 
 		   (format t "~a ~%" associated-value)
 		   (traverse-hash-table associated-value)))ht)
   (format t "nil ~%")))
@@ -216,8 +220,11 @@
 	    (loop :for in-element :being :the :element :of (in stmt) :do
 	       (when (eq (car in-element) (nth 1 (statement stmt)))
 		 (setf (gethash 'input1 linkage-hash-table) (value-circle (cdr in-element))) (setf (gethash 'input2 linkage-hash-table) (value-circle (cdr in-element))))))
+
 		      ;;nth 2 3ashan mafrod tkon l form (setq x (recv-from,,,))
-	    ((eq (car (nth 2 (statement stmt))) 'recv-from-other-process)
+	   ((and
+	     (eq (type-of (nth 2 (statement stmt))) 'cons)
+	     (eq (car (nth 2 (statement stmt))) 'recv-from-other-process))
 	    (setf (gethash 'recieved1 linkage-hash-table) (gethash 'input2 linkage-hash-table))
 	     (setf (gethash 'recieved2 linkage-hash-table) (gethash 'input1 linkage-hash-table)))))
 
@@ -230,12 +237,132 @@
 	(setf (gethash 'decision-function linkage-hash-table) #'_identity)
         (setf (gethash 'decision-function linkage-hash-table) (car stmt)))))
 	
+
+(defun value-of-key (hash-table key) ;;key of the form (input.5)where 5 is the statement index
+  (if (gethash key hash-table) ;;associated value != nil 
+      (returned-value (gethash key hash-table)) ;;returned value of associated hashtable
+      (car key)))
+
+
+
+(defun returned-value (hash-table)
+  (let ((value-of-keys-list (list)))
+    (loop :for key :being :the :hash-key :of hash-table :do
+       (unless (eq key 'function)
+	 (push (value-of-key hash-table key) value-of-keys-list)))
+    (apply (gethash 'function hash-table) value-of-keys-list)))
   
 
 (defun _identity (x)
   x)
-	    
+
+
+
+
+
+
+;;----------------------------------------------------------------------------;;
+
+(defclass vertex ()
+  ((id :accessor id :initarg :id)
+   (self-view :accessor self-view :initarg :self-view)
+   (other-view :accessor other-view :initform nil)))
+
+(defun construct-vertex (id view)
+  (make-instance 'vertex :id id :self-view view))
+
+;; l mafrod a5ali other-view fe function construc-vertex wala logically 8alat !! 3ashan hia bteegi ba3d l carrier mapping w kda ?
+
+(defun construct-simplex (vertex &rest vertices)
+  (let ((simplex-vector (make-array 1 :fill-pointer 0 :adjustable t)))
+    (vector-push-extend vertex simplex-vector)
+    (when (eq (type-of (car vertices)) 'cons) (setf vertices (car vertices)))
+    (mapcar (lambda (vertex) (vector-push-extend vertex simplex-vector))vertices)
+    simplex-vector))
+
+
+(defun construct-complex (&rest simplices) ;;was (simplex &rest simplices)
+  (let ((complex-vector (make-array 1 :fill-pointer 0 :adjustable t)))
+    ;;(vector-push-extend simplex complex-vector)
+    (mapcar (lambda (simplex) (vector-push-extend simplex complex-vector))simplices)
+    complex-vector))
+
+
+
+(defun equalvertices? (v1 v2)
+  (and (eq (id v1) (id v2))(eq (self-view v1)(self-view v2))))
+
+(defun equalsimplices? (s1 s2)
+  (eq (length s1)(length (remove-duplicates (merge 'vector s1 s2 #'equalvertices?) :test #'equalvertices?))))
+
+(defun in-complex? (complex simplex)
+  (find simplex complex :test #'equalsimplices?)) 
+
+(defun add-to-complex-if-not-exist (complex simplex)
+  (unless (in-complex? complex simplex) (vector-push-extend simplex complex)))
+
+(defun update-other-view (vertex other-view)
+  (setf (other-view vertex) other-view)) ;;it will be union later
+
+(defun carrier-map (simplex) ;;changes the other-value in input simplex even after the let statement
+  (let ((smx simplex))
+  (update-other-view (elt smx 0) (value-of-key linkage-hash-table 'recieved2))
+  (update-other-view (elt smx 1) (value-of-key linkage-hash-table 'recieved1)) smx))
+
+(defun decision-map (vertex decision-function) ;;3amalna extract lel decision men l parsed-code sa7 logically ?
+  (apply decision-function (list (self-view vertex)(other-view vertex))))
+
+(defun simplicial-decision-map (simplex decision-function)
+  (let ((vertices-list nil))
+    (loop :for vertex :being :the :element :of simplex :do
+       (setf (self-view vertex) (decision-map vertex decision-function))
+       (push vertex vertices-list))
+    (if (cdr vertices-list)
+	(construct-simplex (car vertices-list) (cdr vertices-list))
+	(construct-simplex (car vertices-list)))))
+
+(defun ids (number-of-processes)
+  (let ((id-list nil))
+    (loop :for x :from 0 to (1- number-of-processes) :do (push x id-list))
+    id-list))
+
+;;(defun input-complex (number-of-processes possible-input-values)
+  ;;(let ((id-list (ids number-of-processes)))
+    ;;(mapcar (lambda (process-id)
+
+(defun input-complex (first-process-id second-process-id possible-input-values)
+  (let ((input-complex (construct-complex)))
+    (mapcar (lambda (input-value1)
+	      (mapcar (lambda (input-value2)
+			(add-to-complex-if-not-exist input-complex (construct-simplex(construct-vertex first-process-id input-value1)(construct-vertex second-process-id input-value2))))possible-input-values))possible-input-values)
+    input-complex))
+
+
+(defun protocol-complex (input-complex decision-function)
+  (let ((protocol-complex (construct-complex)))
+    (loop :for simplex :being :the :element :of input-complex :do
+       (add-to-complex-if-not-exist protocol-complex (simplicial-decision-map simplex decision-function))) protocol-complex))
      
+ 
+
+(defun 2consensus-output-complex (first-process-id second-process-id possible-input-values)
+  (let ((output-complex (construct-complex)))
+    (mapcar (lambda (input-value)
+	      (add-to-complex-if-not-exist output-complex (construct-simplex (construct-vertex first-process-id input-value)(construct-vertex second-process-id input-value))))possible-input-values)
+    output-complex))
+
+
+;;(defun nil-other-view (simplex)
+  ;;(loop :for vertex :being :the :element :of simplex :do
+    ;; (setf (other-view vertex) nil))simplex)
+	    
+		      
+	    
+  
+     
+  
+	    
+
 
 
 
@@ -244,37 +371,25 @@
 
 ;;main
 
-(defparameter aggan-parsed-code '(
-(setq x (* 2 3))
-(setq y (+ 44 55))
-(setq w (square x))
-(setq z (* y w 4))
-(setq input (+ z w))
+(defparameter parsed-code '(
+(setq x (* 2 3)) ;;6
+(setq y (+ 44 55)) ;;99
+(setq w (square x)) ;;36
+(setq z (* y w 4)) 
+(setq input (+ z w)) ;;14292
 (send-to-other-process input)
-(setq received (recv-from-other-process))
-(setq decision (min input received))
+(setq recieved (recv-from-other-process))
+(setq decision (min input recieved))
 (return decision)))
+
+(defparameter  parsed-code '(
+			     (setq input (random 2));;instead of inputting a value from {0,1}
+			     (send-to-other-process input)
+			     (setq recieved (recv-from-other-process))
+			     (min input recieved)))
 			     
 
-
-(defparameter parsed-code '((setq x 12)
-(setq y 21)
-(if (= y 12)
-	(setq y (* y 2))
-	(setq x 42))
-(setq w 12)
-(+ 2 3)
-(setf z 22)
-(when (> x 20) 
-	(setq x (+ x 1)))
-(setq zz 18)
-(* 3 w)
-(unless (> y 30) 
-	(print "y = 21"))
-(square y)
-(* x 2)))
-
-(construct-statement-vector aggan-parsed-code)
+(construct-statement-vector parsed-code)
 (construct-basic-blocks)
 (leader-predecessors basic-blocks)
 (gen-and-initial-out )
@@ -283,6 +398,20 @@
 (reaching-definitions statements)
 (fill-linkage-hash-table)
 (traverse-hash-table linkage-hash-table)
+
+;;--------------------------;;
+
+(defparameter 1st-process (construct-vertex 'a (value-of-key linkage-hash-table 'input1)))
+(defparameter 2nd-process (construct-vertex 'b (value-of-key linkage-hash-table 'input2)))
+(defparameter input-simplex (construct-simplex 1st-process 2nd-process))
+(defparameter protocol-simplex (carrier-map input-simplex))
+(defparameter output-simplex (simplicial-decision-map protocol-simplex (gethash 'decision-function linkage-hash-table)))
+(defparameter input-complex (input-complex 'a 'b '(0 1)))
+;;(defparameter protocol-complex (protocol-complex input-complex (gethash 'decision-function linkage-hash-table)))
+(defparameter output-complex (2consensus-output-complex (id 1st-process) (id 2nd-process) '(0 1))) 
+(if (in-complex? output-complex  output-simplex)
+    (print "valid code")
+    (print "invalid code"))
 
 
 
